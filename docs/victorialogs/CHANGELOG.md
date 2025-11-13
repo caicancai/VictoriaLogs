@@ -25,10 +25,9 @@ according to [these docs](https://docs.victoriametrics.com/victorialogs/quicksta
 * FEATURE: [querying](https://docs.victoriametrics.com/victorialogs/querying/): add slow query logging via `-search.logSlowQueryDuration`; increments `vl_slow_queries_total`. See [#750](https://github.com/VictoriaMetrics/VictoriaLogs/issues/750).
 * FEATURE: [web UI](https://docs.victoriametrics.com/victorialogs/querying/#web-ui): simplify "Download logs" dialog - show only file name field and description with time range and tenant. See [#789](https://github.com/VictoriaMetrics/VictoriaLogs/issues/789).
 
-* BUGFIX: [web UI](https://docs.victoriametrics.com/victorialogs/querying/#web-ui): fix `hits` chart not updating when changing the `group by` field. See [#788](https://github.com/VictoriaMetrics/VictoriaLogs/issues/788).
 * BUGFIX: [Loki data ingestion](https://docs.victoriametrics.com/victorialogs/data-ingestion/promtail/): fix handling of `Content-Type` HTTP header in `/insert/loki/api/v1/push` endpoint to allow support Clients that send charset or additional information in header. See [#813](https://github.com/VictoriaMetrics/VictoriaLogs/pull/813).
-
 * BUGFIX: [web UI](https://docs.victoriametrics.com/victorialogs/querying/#web-ui): fix `/hits` graph showing the first point outside the selected time range. See [#737](https://github.com/VictoriaMetrics/VictoriaLogs/issues/737).
+* BUGFIX: [web UI](https://docs.victoriametrics.com/victorialogs/querying/#web-ui): fix `hits` chart not updating when changing the `group by` field. See [#788](https://github.com/VictoriaMetrics/VictoriaLogs/issues/788).
 
 ## [v1.37.2](https://github.com/VictoriaMetrics/VictoriaLogs/releases/tag/v1.37.2)
 
