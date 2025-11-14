@@ -68,7 +68,7 @@ sequenceDiagram
 ```
 
 - `vlinsert` handles log ingestion via [all supported protocols](https://docs.victoriametrics.com/victorialogs/data-ingestion/).  
-  It distributes incoming logs evenly across `vlstorage` nodes, as specified by the `-storageNode` command-line flag.
+  It distributes (shards) incoming logs evenly across `vlstorage` nodes, as specified by the `-storageNode` command-line flag.
 
 - `vlselect` receives queries through [all supported HTTP query endpoints](https://docs.victoriametrics.com/victorialogs/querying/).  
   It fetches the required data from the configured `vlstorage` nodes, processes the queries, and returns the results.
