@@ -420,6 +420,16 @@ We recommend reading [key concepts](https://docs.victoriametrics.com/victorialog
 
 See also [security docs](https://docs.victoriametrics.com/victorialogs/cluster/#security).
 
+## Capacity planning
+
+It is recommended leaving the following amounts of spare resource across all the components of [VictoriaLogs cluster](https://docs.victoriametrics.com/victorialogs/cluster/#architecture):
+
+- 50% of free RAM for reducing the probability of OOM (out of memory) crashes and slowdowns during temporary spikes in workload.
+- 50% of spare CPU for reducing the probability of slowdowns during temporary spikes in workload.
+- At least 20% of free storage space at `vlstorage` nodes at the directory pointed by the [`-storageDataPath`](https://docs.victoriametrics.com/victorialogs/#storage) command-line flag.
+  Too small amounts of free disk space may result in significant slowdown for both data ingestion and querying
+  because of inability to merge newly created smaller data parts into bigger data parts.
+
 ## Performance tuning
 
 Cluster components of VictoriaLogs automatically adjust their settings for the best performance and the lowest resource usage on the given hardware.

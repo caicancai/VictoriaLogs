@@ -255,6 +255,16 @@ This scheme can be implemented with the following simple cron job, which must ru
 All the VictoriaLogs instances with NVMe and HDD disks can be queried simultaneously via `vlselect` component of [VictoriaLogs cluster](https://docs.victoriametrics.com/victorialogs/cluster/),
 since [single-node VictoriaLogs instances can be a part of cluster](https://docs.victoriametrics.com/victorialogs/cluster/#single-node-and-cluster-mode-duality).
 
+## Capacity planning
+
+It is recommended leaving the following amounts of spare resource for smooth work of VictoriaLogs:
+
+- 50% of free RAM for reducing the probability of OOM (out of memory) crashes and slowdowns during temporary spikes in workload.
+- 50% of spare CPU for reducing the probability of slowdowns during temporary spikes in workload.
+- At least 20% of free storage space at the directory pointed by the [`-storageDataPath`](https://docs.victoriametrics.com/victorialogs/#storage) command-line flag.
+  Too small amounts of free disk space may result in significant slowdown for both data ingestion and querying
+  because of inability to merge newly created smaller data parts into bigger data parts.
+
 ## Logging new streams
 
 VictoriaLogs can log new [log streams](https://docs.victoriametrics.com/victorialogs/keyconcepts/#stream-fields) during [data ingestion](https://docs.victoriametrics.com/victorialogs/data-ingestion/).
