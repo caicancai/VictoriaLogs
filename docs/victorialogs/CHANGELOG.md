@@ -21,6 +21,8 @@ according to the follosing docs:
 
 ## tip
 
+* BUGFIX: [delete API](https://docs.victoriametrics.com/victorialogs/#how-to-delete-logs): prevent from possible fatal error (panic) at `block_stream_merger.go:237` during the deletion of the logs. See [#825](https://github.com/VictoriaMetrics/VictoriaLogs/issues/825).
+
 ## [v1.38.0](https://github.com/VictoriaMetrics/VictoriaLogs/releases/tag/v1.38.0)
 
 Released at 2025-11-14
