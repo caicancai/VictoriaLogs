@@ -85,14 +85,16 @@ func TestPushProtobufRequest(t *testing.T) {
 			"logRecords": [
 				{"timeUnixNano":1234,"severityNumber":1,"body":{"stringValue":"log-line-message"}},
 				{"timeUnixNano":1235,"severityNumber":25,"body":{"stringValue":"log-line-message-msg-2"}},
-				{"timeUnixNano":1236,"severityNumber":-1,"body":{"stringValue":"log-line-message-msg-2"}}
+				{"timeUnixNano":1236,"severityNumber":-1,"body":{"stringValue":"log-line-message-msg-2"}},
+				{"timeUnixNano":1237,"eventName":"abc","body":{"stringValue":"foobar"}}
 			]
 		}]
 	}]`
-	timestampsExpected = []int64{1234, 1235, 1236}
+	timestampsExpected = []int64{1234, 1235, 1236, 1237}
 	resultsExpected = `{"logger":"context","instance_id":"10","node_taints.role":"dev","node_taints.cluster_load_percent":"0.55","_msg":"log-line-message","severity":"Trace"}
 {"logger":"context","instance_id":"10","node_taints.role":"dev","node_taints.cluster_load_percent":"0.55","_msg":"log-line-message-msg-2","severity":"Unspecified"}
-{"logger":"context","instance_id":"10","node_taints.role":"dev","node_taints.cluster_load_percent":"0.55","_msg":"log-line-message-msg-2","severity":"Unspecified"}`
+{"logger":"context","instance_id":"10","node_taints.role":"dev","node_taints.cluster_load_percent":"0.55","_msg":"log-line-message-msg-2","severity":"Unspecified"}
+{"logger":"context","instance_id":"10","node_taints.role":"dev","node_taints.cluster_load_percent":"0.55","event_name":"abc","_msg":"foobar","severity":"Unspecified"}`
 	f(data, timestampsExpected, resultsExpected)
 
 	// multi-scope with resource attributes and multi-line
@@ -124,19 +126,21 @@ func TestPushProtobufRequest(t *testing.T) {
 				"logRecords": [
 					{"timeUnixNano":2347,"severityNumber":12,"body":{"stringValue":"log-line-resource-scope-1-1-0"}},
 					{"observedTimeUnixNano":2348,"severityNumber":12,"body":{"stringValue":"log-line-resource-scope-1-1-1"},"traceID":"1234","spanID":"45"},
-					{"observedTimeUnixNano":3333,"body":{"stringValue":"log-line-resource-scope-1-1-2"},"traceID":"4bf92f3577b34da6a3ce929d0e0e4736","spanID":"00f067aa0ba902b7"}
+					{"observedTimeUnixNano":3333,"body":{"stringValue":"log-line-resource-scope-1-1-2"},"traceID":"4bf92f3577b34da6a3ce929d0e0e4736","spanID":"00f067aa0ba902b7"},
+					{"timeUnixNano":432,"body":{"stringValue":"abcd"},"eventName":"foobar"}
 				]
 			}
 		]
 	}]`
-	timestampsExpected = []int64{1234, 1235, 2345, 2346, 2347, 2348, 3333}
+	timestampsExpected = []int64{1234, 1235, 2345, 2346, 2347, 2348, 3333, 432}
 	resultsExpected = `{"logger":"context","instance_id":"10","node_taints.role":"dev","node_taints.cluster_load_percent":"0.55","_msg":"log-line-message","severity":"Trace"}
 {"logger":"context","instance_id":"10","node_taints.role":"dev","node_taints.cluster_load_percent":"0.55","_msg":"log-line-message-msg-2","severity":"Debug"}
 {"_msg":"log-line-resource-scope-1-0-0","severity":"Info2"}
 {"_msg":"log-line-resource-scope-1-0-1","severity":"Info2"}
 {"_msg":"log-line-resource-scope-1-1-0","severity":"Info4"}
 {"_msg":"log-line-resource-scope-1-1-1","trace_id":"1234","span_id":"45","severity":"Info4"}
-{"_msg":"log-line-resource-scope-1-1-2","trace_id":"4bf92f3577b34da6a3ce929d0e0e4736","span_id":"00f067aa0ba902b7","severity":"Unspecified"}`
+{"_msg":"log-line-resource-scope-1-1-2","trace_id":"4bf92f3577b34da6a3ce929d0e0e4736","span_id":"00f067aa0ba902b7","severity":"Unspecified"}
+{"event_name":"foobar","_msg":"abcd","severity":"Unspecified"}`
 	f(data, timestampsExpected, resultsExpected)
 
 	// nested fields
@@ -472,6 +476,7 @@ type logRecord struct {
 	Attributes     []*keyValue `json:"attributes,omitzero"`
 	TraceID        string      `json:"traceID,omitzero"`
 	SpanID         string      `json:"spanID,omitzero"`
+	EventName      string      `json:"eventName,omitzero"`
 }
 
 func (lr *logRecord) marshalProtobuf(mm *easyproto.MessageMarshaler) {
@@ -496,4 +501,6 @@ func (lr *logRecord) marshalProtobuf(mm *easyproto.MessageMarshaler) {
 	mm.AppendBytes(10, spanID)
 
 	mm.AppendFixed64(11, lr.ObservedTimeUnixNano)
+
+	mm.AppendString(12, lr.EventName)
 }

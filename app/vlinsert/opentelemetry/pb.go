@@ -17,8 +17,7 @@ type pushLogsHandler func(timestamp int64, fields []logstorage.Field, resourceFi
 
 // decodeLogsData parses a LogsData protobuf message from src and calls the provided pushLogs for each decoded log record.
 //
-// See the definition of LogsData here:
-// https://github.com/open-telemetry/opentelemetry-proto/blob/34d29fe5ad4689b5db0259d3750de2bfa195bc85/opentelemetry/proto/logs/v1/logs.proto#L38
+// See https://github.com/open-telemetry/opentelemetry-proto/blob/a5f0eac5b802f7ae51dfe41e5116fe5548955e64/opentelemetry/proto/logs/v1/logs.proto#L38
 func decodeLogsData(src []byte, pushLogs pushLogsHandler) (err error) {
 	// message LogsData {
 	//   repeated ResourceLogs resource_logs = 1;
@@ -145,19 +144,32 @@ func decodeScopeLogs(src []byte, fs *logstorage.Fields, pushLogs pushLogsHandler
 			fb.reset()
 			fs.Fields = fs.Fields[:resourceFieldsLen]
 
-			var timestamp int64
-			timestamp, err = decodeLogRecord(data, fs, fb)
+			eventName, timestamp, err := decodeLogRecord(data, fs, fb)
 			if err != nil {
 				return fmt.Errorf("cannot decode LogRecord: %w", err)
 			}
+			if eventName != "" {
+				// Insert eventName into resource fields
+				fs.Add("dummy", "value")
+				for i := len(fs.Fields) - 1; i > resourceFieldsLen; i-- {
+					fs.Fields[i] = fs.Fields[i-1]
+				}
+				f := &fs.Fields[resourceFieldsLen]
+				f.Name = "event_name"
+				f.Value = eventName
 
-			pushLogs(timestamp, fs.Fields, resourceFieldsLen)
+				pushLogs(timestamp, fs.Fields, resourceFieldsLen+1)
+			} else {
+				pushLogs(timestamp, fs.Fields, resourceFieldsLen)
+			}
 		}
 	}
 	return nil
 }
 
-func decodeLogRecord(src []byte, fs *logstorage.Fields, fb *fmtBuffer) (int64, error) {
+func decodeLogRecord(src []byte, fs *logstorage.Fields, fb *fmtBuffer) (string, int64, error) {
+	// See https://github.com/open-telemetry/opentelemetry-proto/blob/a5f0eac5b802f7ae51dfe41e5116fe5548955e64/opentelemetry/proto/logs/v1/logs.proto#L136
+	//
 	// message LogRecord {
 	//   fixed64 time_unix_nano = 1;
 	//   fixed64 observed_time_unix_nano = 11;
@@ -167,6 +179,7 @@ func decodeLogRecord(src []byte, fs *logstorage.Fields, fb *fmtBuffer) (int64, e
 	//   repeated KeyValue attributes = 6;
 	//   bytes trace_id = 9;
 	//   bytes span_id = 10;
+	//   string event_name = 12;
 	// }
 
 	var (
@@ -174,6 +187,7 @@ func decodeLogRecord(src []byte, fs *logstorage.Fields, fb *fmtBuffer) (int64, e
 		observedTimeUnixNano uint64
 		severityText         string
 		severityNumber       int32
+		eventName            string
 	)
 
 	var fc easyproto.FieldContext
@@ -181,60 +195,65 @@ func decodeLogRecord(src []byte, fs *logstorage.Fields, fb *fmtBuffer) (int64, e
 		var err error
 		src, err = fc.NextField(src)
 		if err != nil {
-			return 0, fmt.Errorf("cannot read the next field: %w", err)
+			return "", 0, fmt.Errorf("cannot read the next field: %w", err)
 		}
 		var ok bool
 		switch fc.FieldNum {
 		case 1:
 			timeUnixNano, ok = fc.Fixed64()
 			if !ok {
-				return 0, fmt.Errorf("cannot read log record timestamp")
+				return "", 0, fmt.Errorf("cannot read log record timestamp")
 			}
 		case 11:
 			observedTimeUnixNano, ok = fc.Fixed64()
 			if !ok {
-				return 0, fmt.Errorf("cannot read log record observed timestamp")
+				return "", 0, fmt.Errorf("cannot read log record observed timestamp")
 			}
 		case 2:
 			severityNumber, ok = fc.Int32()
 			if !ok {
-				return 0, fmt.Errorf("cannot read severity number")
+				return "", 0, fmt.Errorf("cannot read severity number")
 			}
 		case 3:
 			severityText, ok = fc.String()
 			if !ok {
-				return 0, fmt.Errorf("cannot read severity string")
+				return "", 0, fmt.Errorf("cannot read severity string")
 			}
 		case 5:
 			body, ok := fc.MessageData()
 			if !ok {
-				return 0, fmt.Errorf("cannot read Body")
+				return "", 0, fmt.Errorf("cannot read Body")
 			}
 			if err := decodeAnyValue(body, fs, fb, ""); err != nil {
-				return 0, fmt.Errorf("cannot decode Body: %w", err)
+				return "", 0, fmt.Errorf("cannot decode Body: %w", err)
 			}
 		case 6:
 			data, ok := fc.MessageData()
 			if !ok {
-				return 0, fmt.Errorf("cannot read Attributes data")
+				return "", 0, fmt.Errorf("cannot read Attributes data")
 			}
 			if err := decodeKeyValue(data, fs, fb, ""); err != nil {
-				return 0, fmt.Errorf("cannot decode Attributes: %w", err)
+				return "", 0, fmt.Errorf("cannot decode Attributes: %w", err)
 			}
 		case 9:
 			traceID, ok := fc.Bytes()
 			if !ok {
-				return 0, fmt.Errorf("cannot read trace id")
+				return "", 0, fmt.Errorf("cannot read trace id")
 			}
 			traceIDHex := fb.formatHex(traceID)
 			fs.Add("trace_id", traceIDHex)
 		case 10:
 			spanID, ok := fc.Bytes()
 			if !ok {
-				return 0, fmt.Errorf("cannot read span id")
+				return "", 0, fmt.Errorf("cannot read span id")
 			}
 			spanIDHex := fb.formatHex(spanID)
 			fs.Add("span_id", spanIDHex)
+		case 12:
+			eventName, ok = fc.String()
+			if !ok {
+				return "", 0, fmt.Errorf("cannot read event_name")
+			}
 		}
 	}
 
@@ -253,7 +272,7 @@ func decodeLogRecord(src []byte, fs *logstorage.Fields, fb *fmtBuffer) (int64, e
 		timestamp = time.Now().UnixNano()
 	}
 
-	return timestamp, nil
+	return eventName, timestamp, nil
 }
 
 func decodeKeyValue(src []byte, fs *logstorage.Fields, fb *fmtBuffer, fieldNamePrefix string) error {
@@ -425,7 +444,7 @@ func formatSeverity(severity int32) string {
 	return logSeverities[severity]
 }
 
-// https://github.com/open-telemetry/opentelemetry-collector/blob/cd1f7623fe67240e32e74735488c3db111fad47b/pdata/plog/severity_number.go#L41
+// See https://github.com/open-telemetry/opentelemetry-collector/blob/a0cbea73c189551d751d09659e306f48f594fd62/pdata/plog/severity_number.go#L41
 var logSeverities = []string{
 	"Unspecified",
 	"Trace",
