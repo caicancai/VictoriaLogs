@@ -195,6 +195,11 @@ VictoriaLogs accepts logs with timestamps in the time range `[now-retentionPerio
 where `retentionPeriod` is the value for the `-retentionPeriod` command-line flag and `futureRetention` is the value for the `-futureRetention` command-line flag.
 Sometimes it is needed to reject logs older than the given age. This can be achieved by passing `-maxBackfillAge=d` command-line flag to VictoriaLogs,
 where `d` is the maximum age of logs to be accepted. Older logs are rejected and a sample of these logs is put into VictoriaLogs output logs, so they could be investigated.
+For example, the following command starts VictoriaLogs, which rejects logs older than 1 hour:
+
+```sh
+/path/to/victoria-logs -maxBackfillAge=1h
+```
 
 ## Storage
 
