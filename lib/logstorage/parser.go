@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"math"
+	"net"
 	"slices"
 	"strconv"
 	"strings"
@@ -2058,6 +2059,8 @@ func parseFilterGeneric(lex *lexer, fieldName string) (filter, error) {
 		return parseFilterIn(lex, fieldName)
 	case lex.isKeyword("ipv4_range"):
 		return parseFilterIPv4Range(lex, fieldName)
+	case lex.isKeyword("ipv6_range"):
+		return parseFilterIPv6Range(lex, fieldName)
 	case lex.isKeyword("le_field"):
 		return parseFilterLeField(lex, fieldName)
 	case lex.isKeyword("len_range"):
@@ -2316,6 +2319,40 @@ func parseFilterIPv4Range(lex *lexer, fieldName string) (filter, error) {
 	})
 }
 
+func parseFilterIPv6Range(lex *lexer, fieldName string) (filter, error) {
+	return parseFuncArgs(lex, fieldName, func(funcName string, args []string) (filter, error) {
+		if len(args) == 1 {
+			minValue, maxValue, ok := tryParseIPv6CIDR(args[0])
+			if !ok {
+				return nil, fmt.Errorf("cannot parse IPv6 address or IPv6 CIDR %q at %s()", args[0], funcName)
+			}
+			fr := &filterIPv6Range{
+				fieldName: getCanonicalColumnName(fieldName),
+				minValue:  minValue,
+				maxValue:  maxValue,
+			}
+			return fr, nil
+		}
+		if len(args) != 2 {
+			return nil, fmt.Errorf("unexpected number of args for %s(); got %d; want 2", funcName, len(args))
+		}
+		minValue, ok := tryParseIPv6(args[0])
+		if !ok {
+			return nil, fmt.Errorf("cannot parse lower bound ip %q in %s()", args[0], funcName)
+		}
+		maxValue, ok := tryParseIPv6(args[1])
+		if !ok {
+			return nil, fmt.Errorf("cannot parse upper bound ip %q in %s()", args[1], funcName)
+		}
+		fr := &filterIPv6Range{
+			fieldName: getCanonicalColumnName(fieldName),
+			minValue:  minValue,
+			maxValue:  maxValue,
+		}
+		return fr, nil
+	})
+}
+
 func tryParseIPv4CIDR(s string) (uint32, uint32, bool) {
 	n := strings.IndexByte(s, '/')
 	if n < 0 {
@@ -2334,6 +2371,52 @@ func tryParseIPv4CIDR(s string) (uint32, uint32, bool) {
 	minValue := ip &^ mask
 	maxValue := ip | mask
 	return minValue, maxValue, true
+}
+
+func tryParseIPv6(s string) (string, bool) {
+	ip := net.ParseIP(s)
+	if ip == nil {
+		return "", false
+	}
+	ip = ip.To16()
+	if ip == nil {
+		// It was likely IPv4
+		return "", false
+	}
+	return string(ip), true
+}
+
+func tryParseIPv6CIDR(s string) (string, string, bool) {
+	ip, ipnet, err := net.ParseCIDR(s)
+	if err != nil {
+		// Try parsing as single IP
+		ip, ok := tryParseIPv6(s)
+		return ip, ip, ok
+	}
+	if ip.To4() != nil {
+		return "", "", false
+	}
+	ip16 := ip.To16()
+	if ip16 == nil {
+		return "", "", false
+	}
+
+	mask := ipnet.Mask
+	// Mask min
+	minIP := make([]byte, 16)
+	copy(minIP, ip16)
+	for i := 0; i < 16; i++ {
+		minIP[i] &= mask[i]
+	}
+
+	// Mask max
+	maxIP := make([]byte, 16)
+	copy(maxIP, minIP)
+	for i := 0; i < 16; i++ {
+		maxIP[i] |= ^mask[i]
+	}
+
+	return string(minIP), string(maxIP), true
 }
 
 func parseFilterContainsAll(lex *lexer, fieldName string) (filter, error) {
@@ -3892,6 +3975,7 @@ var reservedKeywords = func() map[string]struct{} {
 		"i",
 		"in",
 		"ipv4_range",
+		"ipv6_range",
 		"le_field",
 		"len_range",
 		"lt_field",
