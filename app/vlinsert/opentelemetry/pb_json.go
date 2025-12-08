@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/VictoriaMetrics/VictoriaMetrics/lib/bytesutil"
 	"github.com/VictoriaMetrics/easyproto"
 	"github.com/valyala/fastjson"
 )
@@ -165,17 +164,16 @@ func decodeKeyValueToJSON(src []byte, dst *fastjson.Value, a *fastjson.Arena, fb
 	// }
 
 	// Decode key
-	data, ok, err := easyproto.GetMessageData(src, 1)
+	fieldName, ok, err := easyproto.GetString(src, 1)
 	if err != nil {
 		return fmt.Errorf("cannot find Key in KeyValue: %w", err)
 	}
 	if !ok {
 		return fmt.Errorf("key is missing in KeyValue")
 	}
-	fieldName := bytesutil.ToUnsafeString(data)
 
 	// Decode value
-	data, ok, err = easyproto.GetMessageData(src, 2)
+	valueData, ok, err := easyproto.GetMessageData(src, 2)
 	if err != nil {
 		return fmt.Errorf("cannot find Value in KeyValue: %w", err)
 	}
@@ -184,7 +182,7 @@ func decodeKeyValueToJSON(src []byte, dst *fastjson.Value, a *fastjson.Arena, fb
 		return nil
 	}
 
-	v, err := decodeAnyValueToJSON(data, a, fb)
+	v, err := decodeAnyValueToJSON(valueData, a, fb)
 	if err != nil {
 		return fmt.Errorf("cannot decode AnyValue: %w", err)
 	}

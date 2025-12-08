@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/VictoriaMetrics/VictoriaMetrics/lib/bytesutil"
 	"github.com/VictoriaMetrics/easyproto"
 
 	"github.com/VictoriaMetrics/VictoriaLogs/lib/logstorage"
@@ -53,15 +52,15 @@ func decodeStream(src []byte, pushLogs pushLogsHandler) error {
 	fs := logstorage.GetFields()
 	defer logstorage.PutFields(fs)
 
-	labelsData, ok, err := easyproto.GetMessageData(src, 1)
+	labels, ok, err := easyproto.GetString(src, 1)
 	if err != nil {
 		return fmt.Errorf("cannot read labels: %w", err)
 	}
 	if !ok {
 		return fmt.Errorf("missing labels")
 	}
-	if err := parsePromLabels(fs, bytesutil.ToUnsafeString(labelsData)); err != nil {
-		return fmt.Errorf("cannot parse labels %q: %w", labelsData, err)
+	if err := parsePromLabels(fs, labels); err != nil {
+		return fmt.Errorf("cannot parse labels %q: %w", labels, err)
 	}
 	streamFieldsLen := len(fs.Fields)
 
@@ -147,7 +146,7 @@ func decodeLabelPair(src []byte, fs *logstorage.Fields) error {
 	//   string value = 2;
 	// }
 
-	nameData, ok, err := easyproto.GetMessageData(src, 1)
+	name, ok, err := easyproto.GetString(src, 1)
 	if err != nil {
 		return fmt.Errorf("cannot read name: %w", err)
 	}
@@ -155,7 +154,7 @@ func decodeLabelPair(src []byte, fs *logstorage.Fields) error {
 		return fmt.Errorf("missing name")
 	}
 
-	valueData, ok, err := easyproto.GetMessageData(src, 2)
+	value, ok, err := easyproto.GetString(src, 2)
 	if err != nil {
 		return fmt.Errorf("cannot read value: %w", err)
 	}
@@ -163,8 +162,8 @@ func decodeLabelPair(src []byte, fs *logstorage.Fields) error {
 		return fmt.Errorf("missing value")
 	}
 
-	if len(nameData) > 0 && len(valueData) > 0 {
-		fs.Add(bytesutil.ToUnsafeString(nameData), bytesutil.ToUnsafeString(valueData))
+	if name != "" && value != "" {
+		fs.Add(name, value)
 	}
 
 	return nil

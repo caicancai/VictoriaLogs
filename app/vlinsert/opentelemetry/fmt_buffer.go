@@ -45,10 +45,10 @@ func (fb *fmtBuffer) formatFloat(v float64) string {
 	return bytesutil.ToUnsafeString(fb.buf[n:])
 }
 
-func (fb *fmtBuffer) formatSubFieldName(prefix string, suffix []byte) string {
+func (fb *fmtBuffer) formatSubFieldName(prefix, suffix string) string {
 	if prefix == "" {
 		// There is no prefix, so just return the suffix as is.
-		return bytesutil.ToUnsafeString(suffix)
+		return suffix
 	}
 
 	n := len(fb.buf)

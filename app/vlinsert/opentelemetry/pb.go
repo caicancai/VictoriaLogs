@@ -5,8 +5,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/VictoriaMetrics/VictoriaMetrics/lib/bytesutil"
-
 	"github.com/VictoriaMetrics/VictoriaLogs/lib/logstorage"
 	"github.com/VictoriaMetrics/easyproto"
 )
@@ -196,23 +194,23 @@ func decodeInstrumentationScope(src []byte, fs *logstorage.Fields, fb *fmtBuffer
 	//   repeated KeyValue attributes = 3;
 	// }
 
-	nameData, ok, err := easyproto.GetMessageData(src, 1)
+	nameStr, ok, err := easyproto.GetString(src, 1)
 	if err != nil {
 		return fmt.Errorf("cannot read name: %w", err)
 	}
 	name := "unknown"
 	if ok {
-		name = bytesutil.ToUnsafeString(nameData)
+		name = nameStr
 	}
 	fs.Add("scope.name", name)
 
-	versionData, ok, err := easyproto.GetMessageData(src, 2)
+	versionStr, ok, err := easyproto.GetString(src, 2)
 	if err != nil {
 		return fmt.Errorf("cannot read version: %w", err)
 	}
 	version := "unknown"
 	if ok {
-		version = bytesutil.ToUnsafeString(versionData)
+		version = versionStr
 	}
 	fs.Add("scope.version", version)
 
@@ -352,14 +350,14 @@ func decodeKeyValue(src []byte, fs *logstorage.Fields, fb *fmtBuffer, fieldNameP
 	// }
 
 	// Decode key
-	keyData, ok, err := easyproto.GetMessageData(src, 1)
+	key, ok, err := easyproto.GetString(src, 1)
 	if err != nil {
 		return fmt.Errorf("cannot find Key in KeyValue: %w", err)
 	}
 	if !ok {
 		return fmt.Errorf("key is missing in KeyValue")
 	}
-	fieldName := fb.formatSubFieldName(fieldNamePrefix, keyData)
+	fieldName := fb.formatSubFieldName(fieldNamePrefix, key)
 
 	// Decode value
 	valueData, ok, err := easyproto.GetMessageData(src, 2)
