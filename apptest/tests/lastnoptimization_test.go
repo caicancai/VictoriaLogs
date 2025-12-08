@@ -67,7 +67,7 @@ func TestVlsingleLastnOptimization(t *testing.T) {
 	// verify the case when the logs are outside the selected time range
 	selectQueryArgs := apptest.QueryOpts{
 		Start: "2024-12-31T23:59:59Z",
-		End: "2025-01-01T01:00:00Z",
+		End:   "2025-01-01T01:00:00Z",
 		Limit: "3",
 	}
 	got := sut.LogsQLQuery(t, "* | count() x", selectQueryArgs)
@@ -80,7 +80,7 @@ func TestVlsingleLastnOptimization(t *testing.T) {
 
 	selectQueryArgs = apptest.QueryOpts{
 		Start: "2025-01-01T01:00:00.000000001Z",
-		End: "2025-01-01T01:00:03Z",
+		End:   "2025-01-01T01:00:03Z",
 		Limit: "3",
 	}
 	got = sut.LogsQLQuery(t, "* | count() x", selectQueryArgs)
