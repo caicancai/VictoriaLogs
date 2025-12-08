@@ -166,15 +166,16 @@ func parseJSONRequest(data []byte, lmp insertutil.LogMessageProcessor, msgFields
 				return fmt.Errorf("unexpected log message type for %q; want string", lineA[1])
 			}
 			allowMsgRenaming := addMsgField(fieldsTmp, msgParser, bytesutil.ToUnsafeString(msg))
-
-			var streamFields []logstorage.Field
-			if useDefaultStreamFields {
-				streamFields = fieldsTmp.Fields[:commonFieldsLen]
-			}
 			if allowMsgRenaming {
 				logstorage.RenameField(fieldsTmp.Fields[commonFieldsLen:], msgFields, "_msg")
 			}
-			lmp.AddRow(ts, fieldsTmp.Fields, streamFields)
+
+			streamFieldsLen := -1
+			if useDefaultStreamFields {
+				streamFieldsLen = commonFieldsLen
+			}
+
+			lmp.AddRow(ts, fieldsTmp.Fields, streamFieldsLen)
 		}
 	}
 

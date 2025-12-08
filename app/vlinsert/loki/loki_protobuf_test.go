@@ -14,9 +14,9 @@ type testLogMessageProcessor struct {
 	pr pushRequest
 }
 
-func (tlp *testLogMessageProcessor) AddRow(timestamp int64, fields, streamFields []logstorage.Field) {
-	if streamFields != nil {
-		panic(fmt.Errorf("unexpected non-nil streamFields: %v", streamFields))
+func (tlp *testLogMessageProcessor) AddRow(timestamp int64, fields []logstorage.Field, streamFieldsLen int) {
+	if streamFieldsLen >= 0 {
+		panic(fmt.Errorf("unexpected positive streamFieldsLen: %d", streamFieldsLen))
 	}
 	msg := ""
 	for _, f := range fields {

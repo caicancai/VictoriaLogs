@@ -72,16 +72,15 @@ func parseProtobufRequest(data []byte, lmp insertutil.LogMessageProcessor, msgFi
 		}
 
 		allowMsgRenaming := addMsgField(fs, msgParser, line)
-
-		var streamFields []logstorage.Field
-		if useDefaultStreamFields {
-			streamFields = fs.Fields[:streamFieldsLen]
-		}
 		if allowMsgRenaming {
 			logstorage.RenameField(fs.Fields[streamFieldsLen:], msgFields, "_msg")
 		}
 
-		lmp.AddRow(timestamp, fs.Fields, streamFields)
+		if !useDefaultStreamFields {
+			streamFieldsLen = -1
+		}
+
+		lmp.AddRow(timestamp, fs.Fields, streamFieldsLen)
 	}
 
 	if err := decodePushRequest(data, pushLogs); err != nil {

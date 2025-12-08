@@ -113,6 +113,7 @@ func decodeResource(src []byte, fs *logstorage.Fields, fb *fmtBuffer) (err error
 			if !ok {
 				return fmt.Errorf("cannot read Attributes data")
 			}
+
 			if err := decodeKeyValue(data, fs, fb, ""); err != nil {
 				return fmt.Errorf("cannot decode Attributes: %w", err)
 			}

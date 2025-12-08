@@ -36,8 +36,14 @@ type logFileProcessor struct {
 	lr       *logstorage.LogRows
 	tenantID logstorage.TenantID
 
+	// streamFieldsLen is the number of stream fields at the beginning of commonFields.
+	streamFieldsLen int
+
+	// commonFields are common fields for the given log file.
 	commonFields []logstorage.Field
-	streamFields []logstorage.Field
+
+	// fieldsBuf is used for constructing log fields from commonFields and the actual log line fields before sending them to VictoriaLogs.
+	fieldsBuf []logstorage.Field
 
 	// partialCRIContent accumulates the content of partial CRI log lines.
 	// Can be truncated if it exceeds maxLineSize.
@@ -47,13 +53,20 @@ type logFileProcessor struct {
 }
 
 func newLogFileProcessor(storage insertutil.LogRowsStorage, commonFields []logstorage.Field) *logFileProcessor {
-	var streamFields []logstorage.Field
+	// move stream fields to the beginning of commonFields
+
+	streamFields := make([]logstorage.Field, 0, len(commonFields))
 	for _, f := range commonFields {
-		for _, fieldName := range streamFieldNames {
-			if f.Name == fieldName {
-				streamFields = append(streamFields, f)
-				break
-			}
+		if slices.Contains(streamFieldNames, f.Name) {
+			streamFields = append(streamFields, f)
+		}
+	}
+	streamFieldsLen := len(streamFields)
+
+	fields := streamFields
+	for _, f := range commonFields {
+		if !slices.Contains(streamFieldNames, f.Name) {
+			fields = append(fields, f)
 		}
 	}
 
@@ -68,8 +81,8 @@ func newLogFileProcessor(storage insertutil.LogRowsStorage, commonFields []logst
 		lr:       lr,
 		tenantID: tenantID,
 
-		commonFields: commonFields,
-		streamFields: streamFields,
+		streamFieldsLen: streamFieldsLen,
+		commonFields:    fields,
 	}
 }
 
@@ -146,7 +159,7 @@ func (lfp *logFileProcessor) joinPartialLines(criLine criLine) (int64, []byte, b
 	lfp.partialCRIContentSize += len(criLine.content)
 	if lfp.partialCRIContentSize > maxLogLineSize {
 		// Discard the too large log line.
-		reportLogRowSizeExceeded(lfp.streamFields, lfp.partialCRIContentSize)
+		reportLogRowSizeExceeded(lfp.commonFields[:lfp.streamFieldsLen], lfp.partialCRIContentSize)
 
 		lfp.partialCRIContent.Reset()
 		lfp.partialCRIContentSize = 0
@@ -189,8 +202,6 @@ func (lfp *logFileProcessor) addLineInternal(timestamp int64, line []byte) {
 		logstorage.RenameField(parser.Fields, *msgField, "_msg")
 	}
 
-	parser.Fields = append(parser.Fields, lfp.commonFields...)
-
 	if len(parser.Fields) > 1000 {
 		line := logstorage.MarshalFieldsToJSON(nil, parser.Fields)
 		logger.Warnf("dropping log line with %d fields; %s", parser.Fields, line)
@@ -201,7 +212,11 @@ func (lfp *logFileProcessor) addLineInternal(timestamp int64, line []byte) {
 }
 
 func (lfp *logFileProcessor) addRow(timestamp int64, fields []logstorage.Field) {
-	lfp.lr.MustAdd(lfp.tenantID, timestamp, fields, lfp.streamFields)
+	clear(lfp.fieldsBuf)
+	lfp.fieldsBuf = append(lfp.fieldsBuf[:0], lfp.commonFields...)
+	lfp.fieldsBuf = append(lfp.fieldsBuf, fields...)
+
+	lfp.lr.MustAdd(lfp.tenantID, timestamp, lfp.fieldsBuf, lfp.streamFieldsLen)
 	lfp.storage.MustAddRows(lfp.lr)
 	lfp.lr.ResetKeepSettings()
 }

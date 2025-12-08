@@ -329,19 +329,22 @@ func (lr *LogRows) MustAddInsertRow(r *InsertRow) {
 	lr.mustAddInternal(sid, r.Timestamp, r.Fields, r.StreamTagsCanonical)
 }
 
+func (lr *LogRows) mustAdd(tenantID TenantID, timestamp int64, fields []Field) {
+	lr.MustAdd(tenantID, timestamp, fields, -1)
+}
+
 // MustAdd adds a log entry with the given args to lr.
 //
-// If streamFields is non-nil, the the given streamFields are used as log stream fields
+// If streamFieldsLen >= 0, then the given number of initial fields are used as log stream fields
 // instead of the pre-configured stream fields from GetLogRows().
 //
-// It is OK to modify the args after returning from the function,
-// since lr copies all the args to internal data.
+// It is OK to modify the args after returning from the function, since lr copies all the args to internal data.
 //
 // Log entries are dropped with the warning message in the following cases:
 // - if there are too many log fields
 // - if there are too long log field names
 // - if the total length of log entries is too long
-func (lr *LogRows) MustAdd(tenantID TenantID, timestamp int64, fields, streamFields []Field) {
+func (lr *LogRows) MustAdd(tenantID TenantID, timestamp int64, fields []Field, streamFieldsLen int) {
 	// Verify that the log entry doesn't exceed limits.
 	if len(fields) > maxColumnsPerBlock {
 		line := MarshalFieldsToJSON(nil, fields)
@@ -367,11 +370,11 @@ func (lr *LogRows) MustAdd(tenantID TenantID, timestamp int64, fields, streamFie
 		return
 	}
 
-	// Compose StreamTags from fields according to streamFields, lr.streamFields and lr.extraStreamFields
+	// Compose StreamTags from fields according to streamFieldsLen, lr.streamFields and lr.extraStreamFields
 	st := GetStreamTags()
-	if streamFields != nil {
-		// streamFields override lr.streamFields
-		for _, f := range streamFields {
+	if streamFieldsLen >= 0 {
+		// lr.streamFields with fields[:streamFieldsLen]
+		for _, f := range fields[:streamFieldsLen] {
 			fieldName := getCanonicalFieldName(f.Name)
 			if !lr.ignoreFields.MatchString(fieldName) {
 				st.Add(fieldName, f.Value)

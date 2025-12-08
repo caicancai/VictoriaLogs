@@ -370,7 +370,7 @@ func storeRowsForProcessDeleteTaskTest(s *Storage, tenantIDs []TenantID, now int
 						Value: tenantID.String(),
 					})
 					timestamp := now - dayID*nsecsPerDay
-					lr.MustAdd(tenantID, timestamp, fields, nil)
+					lr.mustAdd(tenantID, timestamp, fields)
 					if lr.NeedFlush() {
 						s.MustAddRows(lr)
 						lr.ResetKeepSettings()

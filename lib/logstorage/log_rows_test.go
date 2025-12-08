@@ -34,7 +34,7 @@ func TestLogRows_WildcardIgnoreFields(t *testing.T) {
 				t.Fatalf("unexpected error when parsing %q: %s", r, err)
 			}
 			timestamp := int64(i)*1_000 + 1
-			lr.MustAdd(tid, timestamp, p.Fields, nil)
+			lr.mustAdd(tid, timestamp, p.Fields)
 		}
 
 		var result []string
@@ -72,8 +72,8 @@ func TestLogRows_StreamFieldsOverride(t *testing.T) {
 	type opts struct {
 		rows []string
 
-		streamFields []Field
-		ignoreFields []string
+		streamFieldsLen int
+		ignoreFields    []string
 
 		resultExpected []string
 	}
@@ -96,7 +96,7 @@ func TestLogRows_StreamFieldsOverride(t *testing.T) {
 				t.Fatalf("unexpected error when parsing %q: %s", r, err)
 			}
 			timestamp := int64(i)*1_000 + 1
-			lr.MustAdd(tid, timestamp, p.Fields, o.streamFields)
+			lr.MustAdd(tid, timestamp, p.Fields, o.streamFieldsLen)
 		}
 
 		var result []string
@@ -113,19 +113,14 @@ func TestLogRows_StreamFieldsOverride(t *testing.T) {
 
 	o = opts{
 		rows: []string{
-			`{"foo":"bar","_msg":"abc"}`,
+			`{"xyz":"123","foo":"bar","_msg":"abc"}`,
 			`{"xyz":"bar","_msg":"abc"}`,
 			`{"xyz":"123","_msg":"abc"}`,
 		},
-		streamFields: []Field{
-			{
-				Name:  "xyz",
-				Value: "123",
-			},
-		},
+		streamFieldsLen: 1,
 		resultExpected: []string{
-			`{"_msg":"abc","_stream":"{xyz=\"123\"}","_time":"1970-01-01T00:00:00.000000001Z","foo":"bar"}`,
-			`{"_msg":"abc","_stream":"{xyz=\"123\"}","_time":"1970-01-01T00:00:00.000001001Z","xyz":"bar"}`,
+			`{"_msg":"abc","_stream":"{xyz=\"123\"}","_time":"1970-01-01T00:00:00.000000001Z","foo":"bar","xyz":"123"}`,
+			`{"_msg":"abc","_stream":"{xyz=\"bar\"}","_time":"1970-01-01T00:00:00.000001001Z","xyz":"bar"}`,
 			`{"_msg":"abc","_stream":"{xyz=\"123\"}","_time":"1970-01-01T00:00:00.000002001Z","xyz":"123"}`,
 		},
 	}
@@ -137,21 +132,12 @@ func TestLogRows_StreamFieldsOverride(t *testing.T) {
 			`{"xyz":"bar","_msg":"abc"}`,
 			`{"xyz":"123","_msg":"abc"}`,
 		},
-		streamFields: []Field{
-			{
-				Name:  "xyz",
-				Value: "123",
-			},
-			{
-				Name:  "f1",
-				Value: "v1",
-			},
-		},
-		ignoreFields: []string{"xyz", "qwert"},
+		streamFieldsLen: 0,
+		ignoreFields:    []string{"xyz", "qwert"},
 		resultExpected: []string{
-			`{"_msg":"abc","_stream":"{f1=\"v1\"}","_time":"1970-01-01T00:00:00.000000001Z","foo":"bar"}`,
-			`{"_msg":"abc","_stream":"{f1=\"v1\"}","_time":"1970-01-01T00:00:00.000001001Z"}`,
-			`{"_msg":"abc","_stream":"{f1=\"v1\"}","_time":"1970-01-01T00:00:00.000002001Z"}`,
+			`{"_msg":"abc","_stream":"{}","_time":"1970-01-01T00:00:00.000000001Z","foo":"bar"}`,
+			`{"_msg":"abc","_stream":"{}","_time":"1970-01-01T00:00:00.000001001Z"}`,
+			`{"_msg":"abc","_stream":"{}","_time":"1970-01-01T00:00:00.000002001Z"}`,
 		},
 	}
 	f(o)
@@ -188,7 +174,7 @@ func TestLogRows_DefaultMsgValue(t *testing.T) {
 				t.Fatalf("unexpected error when parsing %q: %s", r, err)
 			}
 			timestamp := int64(i)*1_000 + 1
-			lr.MustAdd(tid, timestamp, p.Fields, nil)
+			lr.mustAdd(tid, timestamp, p.Fields)
 		}
 
 		var result []string

@@ -253,7 +253,7 @@ func readLogsRequest(ts int64, data []byte, lmp insertutil.LogMessageProcessor) 
 		if err != nil {
 			return err
 		}
-		lmp.AddRow(ts, fields, nil)
+		lmp.AddRow(ts, fields, -1)
 		fields = fields[:0]
 	}
 	return nil

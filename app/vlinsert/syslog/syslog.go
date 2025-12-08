@@ -616,7 +616,7 @@ func processLine(line []byte, currentYear int, timezone *time.Location, useLocal
 		}
 	}
 	logstorage.RenameField(p.Fields, msgFields, "_msg")
-	lmp.AddRow(ts, p.Fields, nil)
+	lmp.AddRow(ts, p.Fields, -1)
 
 	return nil
 }

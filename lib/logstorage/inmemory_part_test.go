@@ -316,7 +316,7 @@ func newTestLogRows(streams, rowsPerStream int, seed int64) *LogRows {
 				fields[i], fields[j] = fields[j], fields[i]
 			})
 			timestamp := rng.Int63()
-			lr.MustAdd(tenantID, timestamp, fields, nil)
+			lr.mustAdd(tenantID, timestamp, fields)
 		}
 	}
 	return lr
@@ -400,7 +400,7 @@ func newTestLogRowsUniqTags(streams, rowsPerStream, uniqFieldsPerRow int) *LogRo
 					Value: fmt.Sprintf("value_%d_%d_%d", i, j, k),
 				})
 			}
-			lr.MustAdd(tenantID, time.Now().UnixMilli(), fields, nil)
+			lr.mustAdd(tenantID, time.Now().UnixMilli(), fields)
 		}
 	}
 	return lr

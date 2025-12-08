@@ -15,9 +15,9 @@ type TestLogMessageProcessor struct {
 }
 
 // AddRow adds row with the given timestamp and fields to tlp
-func (tlp *TestLogMessageProcessor) AddRow(timestamp int64, fields, streamFields []logstorage.Field) {
-	if streamFields != nil {
-		panic(fmt.Errorf("BUG: streamFields must be nil; got %v", streamFields))
+func (tlp *TestLogMessageProcessor) AddRow(timestamp int64, fields []logstorage.Field, streamFieldsLen int) {
+	if streamFieldsLen >= 0 {
+		panic(fmt.Errorf("BUG: streamFieldsLen must be negative; got %d", streamFieldsLen))
 	}
 	tlp.timestamps = append(tlp.timestamps, timestamp)
 	tlp.rows = append(tlp.rows, string(logstorage.MarshalFieldsToJSON(nil, fields)))
@@ -48,7 +48,7 @@ func (tlp *TestLogMessageProcessor) Verify(timestampsExpected []int64, resultExp
 type BenchmarkLogMessageProcessor struct{}
 
 // AddRow implements LogMessageProcessor interface.
-func (blp *BenchmarkLogMessageProcessor) AddRow(_ int64, _, _ []logstorage.Field) {
+func (blp *BenchmarkLogMessageProcessor) AddRow(_ int64, _ []logstorage.Field, _ int) {
 }
 
 // MustClose implements LogMessageProcessor interface.

@@ -78,12 +78,11 @@ func pushProtobufRequest(data []byte, lmp insertutil.LogMessageProcessor, msgFie
 	pushLogs := func(timestamp int64, fields []logstorage.Field, streamFieldsLen int) {
 		logstorage.RenameField(fields[streamFieldsLen:], msgFields, "_msg")
 
-		var streamFields []logstorage.Field
-		if useDefaultStreamFields {
-			streamFields = fields[:streamFieldsLen]
+		if !useDefaultStreamFields {
+			streamFieldsLen = -1
 		}
 
-		lmp.AddRow(timestamp, fields, streamFields)
+		lmp.AddRow(timestamp, fields, streamFieldsLen)
 	}
 
 	if err := decodeLogsData(data, pushLogs); err != nil {

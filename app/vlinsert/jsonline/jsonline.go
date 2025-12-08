@@ -111,7 +111,7 @@ func readLine(lr *insertutil.LineReader, timeFields, msgFields []string, lmp ins
 		return true, fmt.Errorf("%s; line contents: %q", err, line)
 	}
 	logstorage.RenameField(p.Fields, msgFields, "_msg")
-	lmp.AddRow(ts, p.Fields, nil)
+	lmp.AddRow(ts, p.Fields, -1)
 
 	return true, nil
 }

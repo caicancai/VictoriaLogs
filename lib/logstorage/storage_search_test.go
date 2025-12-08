@@ -77,7 +77,7 @@ func TestStorageRunQuery(t *testing.T) {
 						Name:  "stream-id",
 						Value: streamIDValue,
 					})
-					lr.MustAdd(tenantID, timestamp, fields, nil)
+					lr.mustAdd(tenantID, timestamp, fields)
 				}
 				s.MustAddRows(lr)
 				PutLogRows(lr)
@@ -1050,7 +1050,7 @@ func TestStorageSearch(t *testing.T) {
 						Name:  "source-file",
 						Value: "/foo/bar/baz",
 					})
-					lr.MustAdd(tenantID, timestamp, fields, nil)
+					lr.mustAdd(tenantID, timestamp, fields)
 				}
 				s.MustAddRows(lr)
 				PutLogRows(lr)
@@ -1545,7 +1545,7 @@ func storeRowsForSearchHiddenFieldsFilters(s *Storage, tenantIDs []TenantID, now
 						Value: tenantID.String(),
 					})
 					timestamp := now - dayID*nsecsPerDay
-					lr.MustAdd(tenantID, timestamp, fields, nil)
+					lr.mustAdd(tenantID, timestamp, fields)
 					if lr.NeedFlush() {
 						s.MustAddRows(lr)
 						lr.ResetKeepSettings()

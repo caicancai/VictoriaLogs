@@ -249,7 +249,7 @@ func readJournaldLogEntry(streamName string, lr *insertutil.LineReader, lmp inse
 				if ts == 0 {
 					ts = time.Now().UnixNano()
 				}
-				lmp.AddRow(ts, fb.fields, nil)
+				lmp.AddRow(ts, fb.fields, -1)
 			}
 			return nil
 		}
