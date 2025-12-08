@@ -923,6 +923,30 @@ func TestParseFilterContainsAny(t *testing.T) {
 	f(`a:contains_any(* | fields bar)`, `a`, nil)
 }
 
+func TestParseFilterArrayContains(t *testing.T) {
+	f := func(s, fieldNameExpected, valueExpected string) {
+		t.Helper()
+		q, err := ParseQuery(s)
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+		fa, ok := q.f.(*filterArrayContains)
+		if !ok {
+			t.Fatalf("unexpected filter type; got %T; want *filterArrayContains; filter: %s", q.f, q.f)
+		}
+		if fa.fieldName != fieldNameExpected {
+			t.Fatalf("unexpected fieldName; got %q; want %q", fa.fieldName, fieldNameExpected)
+		}
+		if fa.value != valueExpected {
+			t.Fatalf("unexpected value; got %q; want %q", fa.value, valueExpected)
+		}
+	}
+
+	f(`array_contains(foo)`, `_msg`, "foo")
+	f(`tags:array_contains("prod")`, `tags`, "prod")
+	f(`array_contains("foo bar,baz")`, `_msg`, "foo bar,baz")
+}
+
 func TestParseFilterIPv4Range(t *testing.T) {
 	f := func(s, fieldNameExpected string, minValueExpected, maxValueExpected uint32) {
 		t.Helper()
@@ -1611,6 +1635,11 @@ func TestParseQuery_Success(t *testing.T) {
 	f(`x:contains_all(_time:5m y:contains_all(*|fields z) | stats by (q) count() rows|fields q)`, `x:contains_all(_time:5m y:contains_all(* | fields z) | stats by (q) count(*) as rows | fields q)`)
 	f(`contains_all(bar:contains_all(1,2,3) | uniq (x)) | stats count() rows`, `contains_all(bar:contains_all(1,2,3) | uniq by (x)) | stats count(*) as rows`)
 	f(`contains_all((1) | fields z) | stats count() rows`, `contains_all(1 | fields z) | stats count(*) as rows`)
+
+	// array_contains filter
+	f(`array_contains(foo)`, `array_contains(foo)`)
+	f(`array_contains('foo bar,baz')`, `array_contains("foo bar,baz")`)
+	f(`tags:array_contains(foo-bar/baz)`, `tags:array_contains("foo-bar/baz")`)
 
 	// ipv4_range filter
 	f(`ipv4_range(1.2.3.4, "5.6.7.8")`, `ipv4_range(1.2.3.4, 5.6.7.8)`)
