@@ -198,6 +198,16 @@ func TestPushProtobufRequest(t *testing.T) {
 									"stringValue": "document_parsing_exception"
 								}
 							}, {
+								"key": "missing-value",
+								"value": {
+									"stringValue": ""
+								}
+							}, {
+								"key": "",
+								"value": {
+									"stringValue": "missing-key"
+								}
+							}, {
 								"key": "reason",
 								"value": {
 									"stringValue": "failed to parse field [_msg] of type [text]"
