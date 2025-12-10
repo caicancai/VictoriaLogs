@@ -23,7 +23,7 @@ func TestPushProtobufRequest(t *testing.T) {
 			t.Fatalf("unexpected error when parsing JSON: %s", err)
 		}
 
-		lr := exportLogsServiceRequest{
+		lr := logsData{
 			ResourceLogs: rls,
 		}
 
@@ -366,13 +366,13 @@ func TestPushProtobufRequest(t *testing.T) {
 
 var mp easyproto.MarshalerPool
 
-// exportLogsServiceRequest represents the corresponding OTEL protobuf message.
-type exportLogsServiceRequest struct {
+// logsData represents the corresponding OTEL protobuf message.
+type logsData struct {
 	ResourceLogs []resourceLogs `json:"resourceLogs,omitzero"`
 }
 
 // MarshalProtobuf marshals r to a protobuf message, appends it to dst and returns the result.
-func (r *exportLogsServiceRequest) marshalProtobuf(dst []byte) []byte {
+func (r *logsData) marshalProtobuf(dst []byte) []byte {
 	m := mp.Get()
 	r.marshalProtobufInternal(m.MessageMarshaler())
 	dst = m.Marshal(dst)
@@ -380,7 +380,7 @@ func (r *exportLogsServiceRequest) marshalProtobuf(dst []byte) []byte {
 	return dst
 }
 
-func (r *exportLogsServiceRequest) marshalProtobufInternal(mm *easyproto.MessageMarshaler) {
+func (r *logsData) marshalProtobufInternal(mm *easyproto.MessageMarshaler) {
 	for _, rm := range r.ResourceLogs {
 		rm.marshalProtobuf(mm.AppendMessage(1))
 	}
