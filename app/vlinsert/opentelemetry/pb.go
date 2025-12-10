@@ -175,13 +175,15 @@ func decodeScopeLogs(src []byte, fs *logstorage.Fields, fb *fmtBuffer, pushLogs 
 				pushLogs(timestamp, fs.Fields, streamFieldsLen+1)
 
 				// Return back common fields to their places before the next iteration
+				fieldsLen := len(fs.Fields)
 				fs.Fields = append(fs.Fields[:streamFieldsLen], fs.Fields[streamFieldsLen+1:commonFieldsLen+1]...)
+				clear(fs.Fields[commonFieldsLen:fieldsLen])
 			} else {
 				pushLogs(timestamp, fs.Fields, streamFieldsLen)
-			}
 
-			clear(fs.Fields[commonFieldsLen:])
-			fs.Fields = fs.Fields[:commonFieldsLen]
+				clear(fs.Fields[commonFieldsLen:])
+				fs.Fields = fs.Fields[:commonFieldsLen]
+			}
 
 			fb.buf = fb.buf[:fbLen]
 		}
