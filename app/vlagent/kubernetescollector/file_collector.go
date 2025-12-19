@@ -37,12 +37,12 @@ type fileCollector struct {
 	logFiles     map[string]struct{}
 	logFilesLock sync.RWMutex
 
-	// filter defines the criteria for excluding log files from processing.
+	// excludeFilter defines the criteria for excluding log files from processing.
 	// It matches against common metadata fields associated with the log source,
 	// such as 'kubernetes.container_name', 'kubernetes.pod_node_name', or 'kubernetes.pod_namespace'.
 	//
 	// See getCommonFields for the full list of available metadata fields.
-	filter *logstorage.Filter
+	excludeFilter *logstorage.Filter
 
 	newProcessor func(commonFields []logstorage.Field) processor
 
@@ -58,7 +58,7 @@ type fileCollector struct {
 // The fileCollector maintains a checkpoint file that serves as persistent state storage.
 // This allows resuming log reading from the exact position where it was interrupted
 // when vlagent is restarted, preventing duplication.
-func startFileCollector(checkpointsPath string, filter *logstorage.Filter, newProcessor func(commonFields []logstorage.Field) processor) *fileCollector {
+func startFileCollector(checkpointsPath string, excludeFilter *logstorage.Filter, newProcessor func(commonFields []logstorage.Field) processor) *fileCollector {
 	checkpointsDB, err := startCheckpointsDB(checkpointsPath)
 	if err != nil {
 		logger.Panicf("FATAL: cannot start checkpoints DB: %s", err)
@@ -66,7 +66,7 @@ func startFileCollector(checkpointsPath string, filter *logstorage.Filter, newPr
 
 	c := &fileCollector{
 		logFiles:      make(map[string]struct{}),
-		filter:        filter,
+		excludeFilter: excludeFilter,
 		newProcessor:  newProcessor,
 		checkpointsDB: checkpointsDB,
 		stopCh:        make(chan struct{}),
@@ -109,7 +109,7 @@ func (fc *fileCollector) startRead(filepath string, commonFields []logstorage.Fi
 func (fc *fileCollector) process(lf *logFile) {
 	defer lf.close()
 
-	if fc.filter != nil && fc.filter.MatchRow(lf.commonFields) {
+	if fc.excludeFilter != nil && fc.excludeFilter.MatchRow(lf.commonFields) {
 		// Filter matches - skip this file.
 		fc.forgetFile(lf.path)
 		return

@@ -155,14 +155,14 @@ Supported metadata fields:
 - `kubernetes.container_id` - ID of the container in the runtime.
 - `kubernetes.pod_labels.*` - any Pod label (e.g., `kubernetes.pod_labels.app`).
 
-To enable filtering, use the `-kubernetesCollector.filter` command-line flag with any [LogsQL filter](https://docs.victoriametrics.com/victorialogs/logsql/#filters).
+To enable filtering, use the `-kubernetesCollector.excludeFilter` command-line flag with any [LogsQL filter](https://docs.victoriametrics.com/victorialogs/logsql/#filters).
 Note that [pipes](https://docs.victoriametrics.com/victorialogs/logsql/#pipes) are not supported in filter expressions.
 
 Example usage:
 
 ```sh
 ./vlagent -remoteWrite.url=http://victoria-logs:9428/internal/insert -kubernetesCollector \
-  -kubernetesCollector.filter='kubernetes.pod_labels.logging.vlagent.io/exclude:=true or kubernetes.pod_namespace:in(test, logging)'
+  -kubernetesCollector.excludeFilter='kubernetes.pod_labels.logging.vlagent.io/exclude:=true or kubernetes.pod_namespace:in(test, logging)'
 ```
 
 This command starts vlagent with a filter that excludes logs from pods labeled with `logging.vlagent.io/exclude: true` 
