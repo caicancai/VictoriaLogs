@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/VictoriaMetrics/VictoriaLogs/lib/prefixfilter"
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/logger"
 )
 
 // filterIPv6Range matches the given ipv6 range [minValue..maxValue].
@@ -12,13 +13,13 @@ import (
 // Example LogsQL: `fieldName:ipv6_range(::1, ::2)`
 type filterIPv6Range struct {
 	fieldName string
-	minValue  string
-	maxValue  string
+	minValue  [16]byte
+	maxValue  [16]byte
 }
 
 func (fr *filterIPv6Range) String() string {
-	minIP := net.IP([]byte(fr.minValue))
-	maxIP := net.IP([]byte(fr.maxValue))
+	minIP := net.IP(fr.minValue[:])
+	maxIP := net.IP(fr.maxValue[:])
 	return fmt.Sprintf("%sipv6_range(%s, %s)", quoteFieldNameIfNeeded(fr.fieldName), minIP.String(), maxIP.String())
 }
 
@@ -35,7 +36,7 @@ func (fr *filterIPv6Range) applyToBlockResult(br *blockResult, bm *bitmap) {
 	minValue := fr.minValue
 	maxValue := fr.maxValue
 
-	if minValue > maxValue {
+	if ipv6Less(maxValue, minValue) {
 		bm.resetBits()
 		return
 	}
@@ -76,7 +77,7 @@ func (fr *filterIPv6Range) applyToBlockResult(br *blockResult, bm *bitmap) {
 		})
 		bbPool.Put(bb)
 	default:
-		bm.resetBits()
+		logger.Panicf("FATAL: unknown valueType=%d", c.valueType)
 	}
 }
 
@@ -85,7 +86,7 @@ func (fr *filterIPv6Range) applyToBlockSearch(bs *blockSearch, bm *bitmap) {
 	minValue := fr.minValue
 	maxValue := fr.maxValue
 
-	if minValue > maxValue {
+	if ipv6Less(maxValue, minValue) {
 		bm.resetBits()
 		return
 	}
@@ -112,11 +113,11 @@ func (fr *filterIPv6Range) applyToBlockSearch(bs *blockSearch, bm *bitmap) {
 	case valueTypeDict:
 		matchValuesDictByIPv6Range(bs, ch, bm, minValue, maxValue)
 	default:
-		bm.resetBits()
+		logger.Panicf("FATAL: %s: unknown valueType=%d", bs.partPath(), ch.valueType)
 	}
 }
 
-func matchValuesDictByIPv6Range(bs *blockSearch, ch *columnHeader, bm *bitmap, minValue, maxValue string) {
+func matchValuesDictByIPv6Range(bs *blockSearch, ch *columnHeader, bm *bitmap, minValue, maxValue [16]byte) {
 	bb := bbPool.Get()
 	for _, v := range ch.valuesDict.values {
 		c := byte(0)
@@ -129,16 +130,31 @@ func matchValuesDictByIPv6Range(bs *blockSearch, ch *columnHeader, bm *bitmap, m
 	bbPool.Put(bb)
 }
 
-func matchStringByIPv6Range(bs *blockSearch, ch *columnHeader, bm *bitmap, minValue, maxValue string) {
+func matchStringByIPv6Range(bs *blockSearch, ch *columnHeader, bm *bitmap, minValue, maxValue [16]byte) {
 	visitValues(bs, ch, bm, func(v string) bool {
 		return matchIPv6Range(v, minValue, maxValue)
 	})
 }
 
-func matchIPv6Range(s string, minValue, maxValue string) bool {
+func matchIPv6Range(s string, minValue, maxValue [16]byte) bool {
 	ip, ok := tryParseIPv6(s)
 	if !ok {
 		return false
 	}
-	return ip >= minValue && ip <= maxValue
+	if ipv6Less(ip, minValue) || ipv6Less(maxValue, ip) {
+		return false
+	}
+	return true
+}
+
+func ipv6Less(a, b [16]byte) bool {
+	for i := 0; i < 16; i++ {
+		if a[i] < b[i] {
+			return true
+		}
+		if a[i] > b[i] {
+			return false
+		}
+	}
+	return false
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"math"
-	"net"
+	"net/netip"
 	"slices"
 	"strconv"
 	"strings"
@@ -2350,50 +2350,53 @@ func tryParseIPv4CIDR(s string) (uint32, uint32, bool) {
 	return minValue, maxValue, true
 }
 
-func tryParseIPv6(s string) (string, bool) {
-	ip := net.ParseIP(s)
-	if ip == nil {
-		return "", false
+func tryParseIPv6(s string) ([16]byte, bool) {
+	addr, err := netip.ParseAddr(s)
+	if err != nil || !addr.Is6() {
+		return [16]byte{}, false
 	}
-	ip = ip.To16()
-	if ip == nil {
-		// It was likely IPv4
-		return "", false
-	}
-	return string(ip), true
+	return addr.As16(), true
 }
 
-func tryParseIPv6CIDR(s string) (string, string, bool) {
-	ip, ipnet, err := net.ParseCIDR(s)
-	if err != nil {
-		// Try parsing as single IP
+func tryParseIPv6CIDR(s string) ([16]byte, [16]byte, bool) {
+	var zero [16]byte
+
+	n := strings.IndexByte(s, '/')
+	if n < 0 {
 		ip, ok := tryParseIPv6(s)
 		return ip, ip, ok
 	}
-	if ip.To4() != nil {
-		return "", "", false
+
+	ip, ok := tryParseIPv6(s[:n])
+	if !ok {
+		return zero, zero, false
 	}
-	ip16 := ip.To16()
-	if ip16 == nil {
-		return "", "", false
+	maskBits, ok := tryParseUint64(s[n+1:])
+	if !ok || maskBits > 128 {
+		return zero, zero, false
 	}
 
-	mask := ipnet.Mask
-	// Mask min
-	minIP := make([]byte, 16)
-	copy(minIP, ip16)
+	var minIP [16]byte
+	var maxIP [16]byte
+	copy(minIP[:], ip[:])
+
 	for i := 0; i < 16; i++ {
-		minIP[i] &= mask[i]
+		remaining := int(maskBits) - i*8
+		var maskByte byte
+		switch {
+		case remaining >= 8:
+			maskByte = 0xff
+		case remaining <= 0:
+			maskByte = 0
+		default:
+			// Top `remaining` bits are 1, the rest are 0.
+			maskByte = ^byte((1 << uint(8-remaining)) - 1)
+		}
+		minIP[i] &= maskByte
+		maxIP[i] = minIP[i] | ^maskByte
 	}
 
-	// Mask max
-	maxIP := make([]byte, 16)
-	copy(maxIP, minIP)
-	for i := 0; i < 16; i++ {
-		maxIP[i] |= ^mask[i]
-	}
-
-	return string(minIP), string(maxIP), true
+	return minIP, maxIP, true
 }
 
 func parseFilterContainsAll(lex *lexer, fieldName string) (filter, error) {
