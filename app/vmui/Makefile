@@ -1,6 +1,6 @@
 # All these commands must run from repository root.
 
-vmui-run-npm-command:
+vmui-run-npm-command: vmui-package-base-image
 	docker run --rm \
 		--user $(shell id -u):$(shell id -g) \
 		--mount type=bind,src="$(shell pwd)/app/vmui",dst=/build \
@@ -15,7 +15,7 @@ vmui-package-base-image:
 vmui-gen-logsql-pipes:
 	NPM_COMMAND="npm run gen:logsql-pipes" $(MAKE) vmui-run-npm-command
 
-vmui-build: vmui-package-base-image
+vmui-build:
 	$(MAKE) vmui-gen-logsql-pipes
 	NPM_COMMAND="npm run build" $(MAKE) vmui-run-npm-command
 
