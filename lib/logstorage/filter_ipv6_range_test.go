@@ -12,8 +12,17 @@ func TestMatchIPv6Range(t *testing.T) {
 
 	f := func(s, minValue, maxValue string, resultExpected bool) {
 		t.Helper()
-		minIP := string(net.ParseIP(minValue).To16())
-		maxIP := string(net.ParseIP(maxValue).To16())
+		parseIP := func(s string) [16]byte {
+			ip := net.ParseIP(s).To16()
+			if ip == nil {
+				t.Fatalf("cannot parse IPv6 address %q in test", s)
+			}
+			var a [16]byte
+			copy(a[:], ip)
+			return a
+		}
+		minIP := parseIP(minValue)
+		maxIP := parseIP(maxValue)
 		result := matchIPv6Range(s, minIP, maxIP)
 		if result != resultExpected {
 			t.Fatalf("unexpected result; got %v; want %v", result, resultExpected)
@@ -38,8 +47,14 @@ func TestMatchIPv6Range(t *testing.T) {
 func TestFilterIPv6Range(t *testing.T) {
 	t.Parallel()
 
-	parseIP := func(s string) string {
-		return string(net.ParseIP(s).To16())
+	parseIP := func(s string) [16]byte {
+		ip := net.ParseIP(s).To16()
+		if ip == nil {
+			t.Fatalf("cannot parse IPv6 address %q in test", s)
+		}
+		var a [16]byte
+		copy(a[:], ip)
+		return a
 	}
 
 	t.Run("const-column", func(t *testing.T) {

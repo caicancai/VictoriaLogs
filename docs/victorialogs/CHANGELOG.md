@@ -87,6 +87,7 @@ Released at 2025-12-20
 * FEATURE: [vlinsert](https://docs.victoriametrics.com/victorialogs/querying/#web-ui): implement `/insert/native` endpoint for public access to the internal VictoriaLogs ingestion protocol. See [#38](https://github.com/VictoriaMetrics/VictoriaLogs/issues/38) and [these docs](https://docs.victoriametrics.com/victorialogs/vlagent/#multitenancy).
 * FEATURE: [web UI](https://docs.victoriametrics.com/victorialogs/querying/#web-ui): add `localStorage` availability checks with error reporting. See [#843](https://github.com/VictoriaMetrics/VictoriaLogs/issues/843).
 * FEATURE: [web UI](https://docs.victoriametrics.com/victorialogs/querying/#web-ui): add `VLUI:`-prefixed `localStorage` keys and legacy key migration.
+* FEATURE: [LogsQL](https://docs.victoriametrics.com/victorialogs/logsql/): add [`ipv6_range` filter](https://docs.victoriametrics.com/victorialogs/logsql/#ipv6-range-filter) for filtering logs by IPv6 address fields and CIDR ranges. This is an IPv6 counterpart to the existing [`ipv4_range` filter](https://docs.victoriametrics.com/victorialogs/logsql/#ipv4-range-filter) and allows efficient matching over stored IPv6 addresses.
 
 * BUGFIX: [web UI](https://docs.victoriametrics.com/victorialogs/querying/#web-ui): fix incorrect y-axis scaling in stats charts when displaying negative values. See [#905](https://github.com/VictoriaMetrics/VictoriaLogs/issues/905).
 

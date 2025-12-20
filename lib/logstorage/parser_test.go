@@ -1025,11 +1025,11 @@ func TestParseFilterIPv6Range(t *testing.T) {
 		if maxWant == nil {
 			t.Fatalf("invalid maxIPExpected in test: %q", maxIPExpected)
 		}
-		if !reflect.DeepEqual([]byte(fr.minValue), []byte(minWant)) {
-			t.Fatalf("unexpected minValue;\ngot\n%v\nwant\n%v", net.IP([]byte(fr.minValue)), net.IP(minWant))
+		if !reflect.DeepEqual(fr.minValue[:], []byte(minWant)) {
+			t.Fatalf("unexpected minValue;\ngot\n%v\nwant\n%v", net.IP(fr.minValue[:]), net.IP(minWant))
 		}
-		if !reflect.DeepEqual([]byte(fr.maxValue), []byte(maxWant)) {
-			t.Fatalf("unexpected maxValue;\ngot\n%v\nwant\n%v", net.IP([]byte(fr.maxValue)), net.IP(maxWant))
+		if !reflect.DeepEqual(fr.maxValue[:], []byte(maxWant)) {
+			t.Fatalf("unexpected maxValue;\ngot\n%v\nwant\n%v", net.IP(fr.maxValue[:]), net.IP(maxWant))
 		}
 	}
 
