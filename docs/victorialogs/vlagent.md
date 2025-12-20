@@ -406,7 +406,7 @@ See the docs at https://docs.victoriametrics.com/victorialogs/vlagent/ .
   -kubernetesCollector
         Whether to enable collecting logs from Kubernetes
   -kubernetesCollector.checkpointsPath string
-        Path to file with checkpoints for Kubernetes logs. Checkpoints are used to persist the read offsets for Kubernetes container logs. When vlagent is restarted, it resumes reading logs from the stored offsets to avoid log duplication (default "vlagent-kubernetes-checkpoints.json")
+        Path to file with checkpoints for Kubernetes logs. Checkpoints are used to persist the read offsets for Kubernetes container logs. When vlagent is restarted, it resumes reading logs from the stored offsets to avoid log duplication; if this flag isn't set, then checkpoints are saved into vlagent-kubernetes-checkpoints.json under -tmpDataPath directory
   -kubernetesCollector.decolorizeFields array
         Fields to remove ANSI color codes across logs ingested from Kubernetes
         Supports an array of values separated by comma or specified via multiple flags.
@@ -616,7 +616,7 @@ See the docs at https://docs.victoriametrics.com/victorialogs/vlagent/ .
         Supports an array of values separated by comma or specified via multiple flags.
         Each array item can contain comma inside single-quoted or double-quoted string, {}, [] and () braces.
   -remoteWrite.tmpDataPath string
-        Path to directory for storing pending data, which isn't sent to the configured -remoteWrite.url . See also -remoteWrite.maxDiskUsagePerURL
+        Path to directory for storing pending data, which isn't sent to the configured -remoteWrite.url . if this flag isn't set, then pending data is stored in the vlagent-remotewrite-data subdirectory under the -tmpDataPath directory; see also -remoteWrite.maxDiskUsagePerURL
   -remoteWrite.url array
         Remote storage URL to write data to. It must support VictoriaLogs native protocol. Example url: http://<victorialogs-host>:9428/insert/native. Pass multiple -remoteWrite.url options in order to replicate the collected data to multiple remote storage systems.
         Supports an array of values separated by comma or specified via multiple flags.
@@ -790,7 +790,7 @@ See the docs at https://docs.victoriametrics.com/victorialogs/vlagent/ .
         Supports an array of values separated by comma or specified via multiple flags.
         Each array item can contain comma inside single-quoted or double-quoted string, {}, [] and () braces.
   -tmpDataPath string
-        Default path for storing vlagent data
+        Default path for storing vlagent data; see also -remoteWrite.tmpDataPath and -kubernetesCollector.checkpointsPath
   -version
         Show VictoriaMetrics version
 ```
