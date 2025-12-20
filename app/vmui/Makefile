@@ -1,33 +1,35 @@
 # All these commands must run from repository root.
 
-VMUI_DIR := app/vmui/packages/vmui
-
-gen-logsql-pipes:
-	cd $(VMUI_DIR) && npm run gen:logsql-pipes
+vmui-run-npm-command:
+	docker run --rm \
+		--user $(shell id -u):$(shell id -g) \
+		--mount type=bind,src="$(shell pwd)/app/vmui",dst=/build \
+		--mount type=bind,src="$(shell pwd)/docs",dst=/docs \
+		-w /build/packages/vmui \
+		--entrypoint=/bin/bash \
+		vmui-builder-image -c "npm install && $(NPM_COMMAND)"
 
 vmui-package-base-image:
 	docker build -t vmui-builder-image -f app/vmui/Dockerfile-build ./app/vmui
 
+vmui-gen-logsql-pipes:
+	NPM_COMMAND="npm run gen:logsql-pipes" $(MAKE) vmui-run-npm-command
+
 vmui-build: vmui-package-base-image
-	-$(MAKE) gen-logsql-pipes
-	docker run --rm \
-		--user $(shell id -u):$(shell id -g) \
-		--mount type=bind,src="$(shell pwd)/app/vmui",dst=/build \
-		-w /build/packages/vmui \
-		--entrypoint=/bin/bash \
-		vmui-builder-image -c "npm install && npm run build"
+	$(MAKE) vmui-gen-logsql-pipes
+	NPM_COMMAND="npm run build" $(MAKE) vmui-run-npm-command
 
 vmui-update: vmui-build
-	rm -rf app/vlselect/vmui/* && mv $(VMUI_DIR)/build/* app/vlselect/vmui && rm -rf app/vlselect/vmui/dashboards
+	rm -rf app/vlselect/vmui/* && mv app/vmui/packages/vmui/build/* app/vlselect/vmui && rm -rf app/vlselect/vmui/dashboards
 
 vmui-install-dependencies:
-	cd $(VMUI_DIR) && npm ci
+	NPM_COMMAND="npm ci" $(MAKE) vmui-run-npm-command
 
 vmui-lint: vmui-install-dependencies
-	cd $(VMUI_DIR) && npm run lint
+	NPM_COMMAND="npm run lint" $(MAKE) vmui-run-npm-command
 
 vmui-typecheck: vmui-install-dependencies
-	cd $(VMUI_DIR) && npm run typecheck
+	NPM_COMMAND="npm run typecheck" $(MAKE) vmui-run-npm-command
 
 vmui-test: vmui-install-dependencies
-	cd $(VMUI_DIR) && npm run test
+	NPM_COMMAND="npm run test" $(MAKE) vmui-run-npm-command
