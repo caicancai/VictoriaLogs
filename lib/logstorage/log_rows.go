@@ -318,6 +318,10 @@ func (lr *LogRows) MustAddInsertRow(r *InsertRow) {
 		logger.Warnf("unexpected tail left after unmarshaling streamTagsCanonical; len(tail)=%d; streamTags: %s; log entry: %s", len(tail), st, line)
 		return
 	}
+
+	// TODO: verify that all the stream tags match the corresponding log fields in r.Fields?
+	// See https://github.com/VictoriaMetrics/VictoriaLogs/issues/38
+
 	PutStreamTags(st)
 
 	// Calculate the id for the StreamTags
