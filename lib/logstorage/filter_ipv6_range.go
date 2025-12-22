@@ -2,7 +2,7 @@ package logstorage
 
 import (
 	"fmt"
-	"net"
+	"net/netip"
 
 	"github.com/VictoriaMetrics/VictoriaLogs/lib/prefixfilter"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/logger"
@@ -18,9 +18,9 @@ type filterIPv6Range struct {
 }
 
 func (fr *filterIPv6Range) String() string {
-	minIP := net.IP(fr.minValue[:])
-	maxIP := net.IP(fr.maxValue[:])
-	return fmt.Sprintf("%sipv6_range(%s, %s)", quoteFieldNameIfNeeded(fr.fieldName), minIP.String(), maxIP.String())
+	minValue := netip.AddrFrom16(fr.minValue).String()
+	maxValue := netip.AddrFrom16(fr.maxValue).String()
+	return fmt.Sprintf("%sipv6_range(%s, %s)", quoteFieldNameIfNeeded(fr.fieldName), minValue, maxValue)
 }
 
 func (fr *filterIPv6Range) updateNeededFields(pf *prefixfilter.Filter) {
@@ -76,6 +76,22 @@ func (fr *filterIPv6Range) applyToBlockResult(br *blockResult, bm *bitmap) {
 			return bb.B[n] == 1
 		})
 		bbPool.Put(bb)
+	case valueTypeUint8:
+		bm.resetBits()
+	case valueTypeUint16:
+		bm.resetBits()
+	case valueTypeUint32:
+		bm.resetBits()
+	case valueTypeUint64:
+		bm.resetBits()
+	case valueTypeInt64:
+		bm.resetBits()
+	case valueTypeFloat64:
+		bm.resetBits()
+	case valueTypeIPv4:
+		bm.resetBits()
+	case valueTypeTimestampISO8601:
+		bm.resetBits()
 	default:
 		logger.Panicf("FATAL: unknown valueType=%d", c.valueType)
 	}
@@ -112,6 +128,22 @@ func (fr *filterIPv6Range) applyToBlockSearch(bs *blockSearch, bm *bitmap) {
 		matchStringByIPv6Range(bs, ch, bm, minValue, maxValue)
 	case valueTypeDict:
 		matchValuesDictByIPv6Range(bs, ch, bm, minValue, maxValue)
+	case valueTypeUint8:
+		bm.resetBits()
+	case valueTypeUint16:
+		bm.resetBits()
+	case valueTypeUint32:
+		bm.resetBits()
+	case valueTypeUint64:
+		bm.resetBits()
+	case valueTypeInt64:
+		bm.resetBits()
+	case valueTypeFloat64:
+		bm.resetBits()
+	case valueTypeIPv4:
+		bm.resetBits()
+	case valueTypeTimestampISO8601:
+		bm.resetBits()
 	default:
 		logger.Panicf("FATAL: %s: unknown valueType=%d", bs.partPath(), ch.valueType)
 	}

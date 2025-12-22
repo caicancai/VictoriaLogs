@@ -2374,6 +2374,12 @@ func tryParseIPv4CIDR(s string) (uint32, uint32, bool) {
 }
 
 func tryParseIPv6(s string) ([16]byte, bool) {
+	// Fast path: IPv6 addresses must contain ':'.
+	// This quickly rejects plain IPv4 and other obvious non-IPv6 strings
+	// without calling netip.ParseAddr, which is relatively expensive.
+	if !strings.Contains(s, ":") {
+		return [16]byte{}, false
+	}
 	addr, err := netip.ParseAddr(s)
 	if err != nil || !addr.Is6() {
 		return [16]byte{}, false
@@ -2399,27 +2405,31 @@ func tryParseIPv6CIDR(s string) ([16]byte, [16]byte, bool) {
 		return zero, zero, false
 	}
 
-	var minIP [16]byte
-	var maxIP [16]byte
-	copy(minIP[:], ip[:])
+	minValue := ip
+	maxValue := ip
 
-	for i := 0; i < 16; i++ {
-		remaining := int(maskBits) - i*8
-		var maskByte byte
-		switch {
-		case remaining >= 8:
-			maskByte = 0xff
-		case remaining <= 0:
-			maskByte = 0
-		default:
-			// Top `remaining` bits are 1, the rest are 0.
-			maskByte = ^byte((1 << uint(8-remaining)) - 1)
+	if maskBits == 0 {
+		clear(minValue[:])
+		for i := range maxValue {
+			maxValue[i] = 0xff
 		}
-		minIP[i] &= maskByte
-		maxIP[i] = minIP[i] | ^maskByte
+		return minValue, maxValue, true
 	}
-
-	return minIP, maxIP, true
+	byteIdx := int(maskBits) / 8
+	bitIdx := int(maskBits) % 8
+	if byteIdx < len(minValue) {
+		if bitIdx > 0 {
+			mask := byte(0xff) << (8 - bitIdx)
+			minValue[byteIdx] &= mask
+			maxValue[byteIdx] |= ^mask
+			byteIdx++
+		}
+		for i := byteIdx; i < len(minValue); i++ {
+			minValue[i] = 0
+			maxValue[i] = 0xff
+		}
+	}
+	return minValue, maxValue, true
 }
 
 func parseFilterContainsAll(lex *lexer, fieldName string) (filter, error) {
