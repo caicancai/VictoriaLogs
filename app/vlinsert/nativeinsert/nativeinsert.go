@@ -49,22 +49,26 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// the TimeFields is always default to `_time` in a `/insert/native` request due to the handling in CommonParams.
-	// we should reset it to empty. In the meantime, if this field is set manually, log a warning.
 	if cp.IsTimeFieldSet {
-		logger.Warnf("/insert/native endpoint doesn't support setting time fields via _time_field query arg and via VL-Time-Field request header; ignoring them; timeFields=%q", cp.TimeFields)
+		unsupportedOptionsLogger.Warnf("/insert/native endpoint doesn't support setting time fields via _time_field query arg and via VL-Time-Field request header; "+
+			"ignoring them; timeFields=%q", cp.TimeFields)
 	}
+	// Unconditionally reset cp.TimeFields, since the code below shouldn't depend on this field.
 	cp.TimeFields = nil
+
 	if len(cp.MsgFields) > 0 {
-		logger.Warnf("/insert/native endpoint doesn't support setting msg fields via _msg_field query arg and via VL-Msg-Field request header; ignoring them; msgFields=%q", cp.MsgFields)
+		unsupportedOptionsLogger.Warnf("/insert/native endpoint doesn't support setting msg fields via _msg_field query arg and via VL-Msg-Field request header; "+
+			"ignoring them; msgFields=%q", cp.MsgFields)
 		cp.MsgFields = nil
 	}
 	if len(cp.StreamFields) > 0 {
-		logger.Warnf("/insert/native endpoint doesn't support setting stream fields via _stream_fields query arg and via VL-Stream-Fields request header; ignoring them; streamFields=%q", cp.StreamFields)
+		unsupportedOptionsLogger.Warnf("/insert/native endpoint doesn't support setting stream fields via _stream_fields query arg and via VL-Stream-Fields request header; "+
+			"ignoring them; streamFields=%q", cp.StreamFields)
 		cp.StreamFields = nil
 	}
 	if len(cp.DecolorizeFields) > 0 {
-		logger.Warnf("/insert/native endpoint doesn't support setting decolorize_fields query arg and VL-Decolorize-Fields request header; ignoring them; decolorizeFields=%q", cp.DecolorizeFields)
+		unsupportedOptionsLogger.Warnf("/insert/native endpoint doesn't support setting decolorize_fields query arg and VL-Decolorize-Fields request header; "+
+			"ignoring them; decolorizeFields=%q", cp.DecolorizeFields)
 		cp.DecolorizeFields = nil
 	}
 
@@ -84,6 +88,8 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	requestDuration.UpdateDuration(startTime)
 }
+
+var unsupportedOptionsLogger = logger.WithThrottler("unsuppoted_options", 5*time.Second)
 
 func parseData(irp insertutil.InsertRowProcessor, data []byte, tenantID logstorage.TenantID) error {
 	var zeroTenantID logstorage.TenantID
