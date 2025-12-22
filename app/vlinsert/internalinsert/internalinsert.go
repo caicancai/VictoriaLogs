@@ -49,10 +49,13 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 		logger.Warnf("/internal/insert endpoint doesn't support setting tenantID via AccountID and ProjectID request headers; ignoring it; tenantID=%q; see https://docs.victoriametrics.com/victorialogs/vlagent/#multitenancy", cp.TenantID)
 		cp.TenantID = logstorage.TenantID{}
 	}
-	if len(cp.TimeFields) > 0 {
+
+	// the TimeFields is always default to `_time` in a `/internal/insert` request due to the handling in CommonParams.
+	// we should reset it to empty. In the meantime, if this field is set manually, log a warning.
+	if cp.IsTimeFieldSet {
 		logger.Warnf("/internal/insert endpoint doesn't support setting time fields via _time_field query arg and via VL-Time-Field request header; ignoring them; timeFields=%q", cp.TimeFields)
-		cp.TimeFields = nil
 	}
+	cp.TimeFields = nil
 	if len(cp.MsgFields) > 0 {
 		logger.Warnf("/internal/insert endpoint doesn't support setting msg fields via _msg_field query arg and via VL-Msg-Field request header; ignoring them; msgFields=%q", cp.MsgFields)
 		cp.MsgFields = nil
