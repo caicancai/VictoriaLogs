@@ -19,15 +19,24 @@ import (
 )
 
 type client interface {
-	// watchNodePods starts watching Pods scheduled on the given node.
-	// The returned stream includes initial events representing the current state
-	// of all Pods running on that node, followed by incremental updates.
-	watchNodePods(ctx context.Context, node string) (podWatchStream, error)
+	// watchNodePods starts watching Pod scheduled on the given node.
+	//
+	// It uses resourceVersion to resume from a specific state.
+	// If empty, the watch provides the current state of all active Pods on the node first,
+	// followed by incremental updates.
+	watchNodePods(ctx context.Context, node, resourceVersion string) (podWatchStream, error)
+
+	// getNodePods returns information about Pods scheduled on the given node.
+	getNodePods(ctx context.Context, node string) (podList, error)
+
+	// getNodeByName returns information about the node with the given name.
+	getNodeByName(ctx context.Context, nodeName string) (node, error)
 }
 
 type kubernetesCollector struct {
-	client      client
-	currentNode string
+	client client
+
+	currentNode node
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -45,14 +54,21 @@ type kubernetesCollector struct {
 // startKubernetesCollector starts watching Kubernetes cluster on the given node and starts collecting container logs.
 // The collector monitors container logs in the specified logsPath directory and uses checkpointsPath to track reading progress.
 // The caller must call stop() when the kubernetesCollector is no longer needed.
-func startKubernetesCollector(client client, currentNode, logsPath, checkpointsPath string, excludeFilter *logstorage.Filter) (*kubernetesCollector, error) {
+func startKubernetesCollector(client client, currentNodeName, logsPath, checkpointsPath string, excludeFilter *logstorage.Filter) (*kubernetesCollector, error) {
 	_, err := os.Stat(logsPath)
 	if err != nil {
 		return nil, fmt.Errorf("cannot access logs dir: %w", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	c := &kubernetesCollector{
+
+	currentNode, err := client.getNodeByName(ctx, currentNodeName)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("cannot get information about current node %q: %w", currentNodeName, err)
+	}
+
+	kc := &kubernetesCollector{
 		client:      client,
 		currentNode: currentNode,
 		ctx:         ctx,
@@ -65,16 +81,53 @@ func startKubernetesCollector(client client, currentNode, logsPath, checkpointsP
 		return newLogFileProcessor(storage, commonFields)
 	}
 	fc := startFileCollector(checkpointsPath, excludeFilter, newProcessor)
-	c.fileCollector = fc
+	kc.fileCollector = fc
 
-	c.startWatchCluster(c.ctx)
+	pl, err := client.getNodePods(ctx, currentNodeName)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("cannot get Pods on node %q: %w", currentNodeName, err)
+	}
 
-	return c, nil
+	// Start reading existing Pod logs.
+	for _, pod := range pl.Items {
+		kc.startReadPodLogs(pod)
+	}
+	// Cleanup checkpoints for deleted Pods.
+	fc.cleanupCheckpoints()
+
+	// Start watching for new Pods.
+	kc.startWatchCluster(kc.ctx, pl.Metadata.ResourceVersion)
+
+	return kc, nil
 }
 
 // startWatchCluster starts watching Pods scheduled on the given node.
 // It calls handleUpdateEvent for each received event.
-func (kc *kubernetesCollector) startWatchCluster(ctx context.Context) {
+func (kc *kubernetesCollector) startWatchCluster(ctx context.Context, resourceVersion string) {
+	handleEvent := func(event watchEvent) {
+		switch event.Type {
+		case "ADDED", "MODIFIED":
+			var pod pod
+			if err := json.Unmarshal(event.Object, &pod); err != nil {
+				logger.Panicf("FATAL: cannot unmarshal Kubernetes event object %q: %s", event.Object, err)
+			}
+
+			kc.startReadPodLogs(pod)
+
+			// Update resourceVersion to the latest seen.
+			resourceVersion = pod.Metadata.ResourceVersion
+		case "DELETED":
+			// Ignore deleted pods.
+		case "ERROR":
+			logger.Errorf("got an error event from Kubernetes API: %q", string(event.Object))
+		default:
+			logger.Errorf("unexpected Kubernetes event type %q: %s", event.Type, string(event.Object))
+		}
+	}
+
+	currentNodeName := kc.currentNode.Metadata.Name
+
 	kc.wg.Add(1)
 	go func() {
 		defer kc.wg.Done()
@@ -88,7 +141,7 @@ func (kc *kubernetesCollector) startWatchCluster(ctx context.Context) {
 		lastEOF := time.Time{}
 
 		for {
-			r, err := kc.client.watchNodePods(ctx, kc.currentNode)
+			r, err := kc.client.watchNodePods(ctx, currentNodeName, resourceVersion)
 			if err != nil {
 				if ctx.Err() != nil {
 					return
@@ -96,19 +149,19 @@ func (kc *kubernetesCollector) startWatchCluster(ctx context.Context) {
 
 				errorFired = true
 
-				logger.Errorf("failed to start watching Pods on node %q: %s; will retry in %s", kc.currentNode, err, bt.currentDelay())
+				logger.Errorf("failed to start watching Pods on node %q: %s; will retry in %s", currentNodeName, err, bt.currentDelay())
 				bt.wait(stopCh)
 				continue
 			}
 
 			if errorFired {
-				logger.Infof("successfully re-established watching Pods on node %q", kc.currentNode)
+				logger.Infof("successfully re-established watching Pods on node %q", currentNodeName)
 			}
 			errorFired = false
 
 			bt.reset()
 
-			err = r.readEvents(kc.handleEvent)
+			err = r.readEvents(handleEvent)
 			_ = r.close()
 			if err != nil {
 				if ctx.Err() != nil {
@@ -132,29 +185,9 @@ func (kc *kubernetesCollector) startWatchCluster(ctx context.Context) {
 	}()
 }
 
-func (kc *kubernetesCollector) handleEvent(event watchEvent) {
-	switch event.Type {
-	case "ADDED", "MODIFIED":
-		kc.handleUpdateEvent(event.Object)
-	case "DELETED":
-		// ignore deleted pods
-	case "ERROR":
-		logger.Errorf("got an error event from Kubernetes API: %q", string(event.Object))
-	default:
-		logger.Errorf("unexpected Kubernetes event type %q: %s", event.Type, string(event.Object))
-	}
-}
-
-// handleUpdateEvent prepares log file path and common fields for the given pod
-// and delegates log file processing to fileCollector.
-func (kc *kubernetesCollector) handleUpdateEvent(data json.RawMessage) {
-	var pod pod
-	if err := json.Unmarshal(data, &pod); err != nil {
-		logger.Panicf("FATAL: cannot unmarshal Kubernetes event object %q: %s", data, err)
-	}
-
+func (kc *kubernetesCollector) startReadPodLogs(pod pod) {
 	startRead := func(pc podContainer, cs containerStatus) {
-		commonFields := getCommonFields(pod, cs)
+		commonFields := getCommonFields(kc.currentNode, pod, cs)
 
 		filePath := kc.getLogFilePath(pod, pc, cs)
 
@@ -184,7 +217,7 @@ func (kc *kubernetesCollector) handleUpdateEvent(data json.RawMessage) {
 // Must be synced with getCommonFields.
 var streamFieldNames = []string{"kubernetes.container_name", "kubernetes.pod_name", "kubernetes.pod_namespace"}
 
-func getCommonFields(p pod, cs containerStatus) []logstorage.Field {
+func getCommonFields(n node, p pod, cs containerStatus) []logstorage.Field {
 	var fs logstorage.Fields
 
 	// Fields should match vector.dev kubernetes_source for easy migration.
@@ -197,6 +230,19 @@ func getCommonFields(p pod, cs containerStatus) []logstorage.Field {
 
 	for k, v := range p.Metadata.Labels {
 		fieldName := "kubernetes.pod_labels." + k
+		fs.Add(fieldName, v)
+	}
+	for k, v := range p.Metadata.Annotations {
+		fieldName := "kubernetes.pod_annotations." + k
+		fs.Add(fieldName, v)
+	}
+
+	for k, v := range n.Metadata.Labels {
+		fieldName := "kubernetes.node_labels." + k
+		fs.Add(fieldName, v)
+	}
+	for k, v := range n.Metadata.Annotations {
+		fieldName := "kubernetes.node_annotations." + k
 		fs.Add(fieldName, v)
 	}
 
