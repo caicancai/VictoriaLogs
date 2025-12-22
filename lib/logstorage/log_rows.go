@@ -28,7 +28,7 @@ type LogRows struct {
 	// streamIDs holds streamIDs for rows added to LogRows
 	streamIDs []streamID
 
-	// timestamps holds stimestamps for rows added to LogRows
+	// timestamps holds timestamps for rows added to LogRows
 	timestamps []int64
 
 	// rows holds fields for rows added to LogRows.
@@ -66,7 +66,7 @@ type logRows struct {
 	// streamIDs holds streamIDs for rows added to logRows
 	streamIDs []streamID
 
-	// timestamps holds stimestamps for rows added to logRows
+	// timestamps holds timestamps for rows added to logRows
 	timestamps []int64
 
 	// rows holds fields for rows added to logRows.
