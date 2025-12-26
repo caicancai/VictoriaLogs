@@ -21,6 +21,10 @@ according to the following docs:
 
 ## tip
 
+## [v1.43.1](https://github.com/VictoriaMetrics/VictoriaLogs/releases/tag/v1.43.1)
+
+Released at 2025-12-26
+
 * BUGFIX: [`/select/logsql/facets` endpoint](https://docs.victoriametrics.com/victorialogs/querying/#querying-facets): fix `expecting 3 columns; got 4 columns` panic when `/select/logsql/facets` endpoint is queried at [cluster version of VictoriaLogs](https://docs.victoriametrics.com/victorialogs/cluster/). See [#940](https://github.com/VictoriaMetrics/VictoriaLogs/issues/940). The issue has been introduced in [this commit](https://github.com/VictoriaMetrics/VictoriaLogs/commit/7f66493f5939de08b8af608b5ab2ed04b9c64c72) in the [release v1.35.0](https://github.com/VictoriaMetrics/VictoriaLogs/releases/tag/v1.35.0).
 * BUGFIX: [Kubernetes Collector](https://docs.victoriametrics.com/victorialogs/vlagent/#collect-kubernetes-pod-logs): properly handle "410 Gone" responses from the Kubernetes API server. Previously, vlagent could report 410 errors and fail to collect logs from newly discovered Pods. The bug has been introduced in [v1.43.0](https://github.com/VictoriaMetrics/VictoriaLogs/releases/tag/v1.43.0). 
 * BUGFIX: [HTTP querying API](https://docs.victoriametrics.com/victorialogs/querying/#http-api): properly add labels from the `by (...)` clause to responses returned from [`/select/logsql/stats_query`](https://docs.victoriametrics.com/victorialogs/querying/#querying-log-stats) and [`/select/logsql/stats_query_range`](https://docs.victoriametrics.com/victorialogs/querying/#querying-log-range-stats) endpoints for [`histogram()` stats function](https://docs.victoriametrics.com/victorialogs/logsql/#histogram-stats) results. See [this comment](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/10184#issuecomment-3693193925) for details.
