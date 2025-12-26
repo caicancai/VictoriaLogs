@@ -962,7 +962,7 @@ func ProcessStatsQueryRangeRequest(ctx context.Context, w http.ResponseWriter, r
 						name := clonedColumnNames[j] + "_bucket"
 						for _, bucket := range buckets {
 							bucketLabels := make([]logstorage.Field, 0, len(labels)+1)
-							copy(bucketLabels, labels)
+							bucketLabels = append(bucketLabels, labels...)
 							bucketLabels = append(bucketLabels, logstorage.Field{
 								Name:  "vmrange",
 								Value: bucket.VMRange,
@@ -1088,7 +1088,7 @@ func ProcessStatsQueryRequest(ctx context.Context, w http.ResponseWriter, r *htt
 						bucketRows := make([]statsRow, 0, len(buckets))
 						for _, bucket := range buckets {
 							bucketLabels := make([]logstorage.Field, 0, len(labels)+1)
-							copy(bucketLabels, labels)
+							bucketLabels = append(bucketLabels, labels...)
 							bucketLabels = append(bucketLabels, logstorage.Field{
 								Name:  "vmrange",
 								Value: bucket.VMRange,
