@@ -13,6 +13,9 @@ tags:
 Loki provides [LogQL](https://grafana.com/docs/loki/latest/query/) query language, while VictoriaLogs provides [LogsQL](https://docs.victoriametrics.com/victorialogs/logsql/)
 query language. Both languages are optimized for querying logs. The docs below show how to convert typical LogQL queries to LogsQL queries.
 
+See also [this playground, which automatically converts Loki queries to VictoriaLogs queries](https://play-logql.victoriametrics.com/).
+The source code of this project is available [here](https://github.com/VictoriaMetrics-community/logql-to-logsql/).
+
 ## Data model
 
 Both Loki and VictoriaLogs support log streams - these are timestamp-ordered streams of logs, where every stream may have its own set of labels. These labels can be used
