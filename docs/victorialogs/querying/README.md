@@ -1128,7 +1128,7 @@ VictoriaLogs provides the following options to limit resource usage by the execu
 VictoriaLogs provides Web UI for logs [querying](https://docs.victoriametrics.com/victorialogs/logsql/) and exploration
 at `http://localhost:9428/select/vmui/`. Try [VictoriaLogs web UI demo playground](https://play-vmlogs.victoriametrics.com/).
 
-There are three modes of displaying query results:
+Web UI provides the following modes for displaying query results:
 
 - `Group` - results are displayed as a table with rows grouped by [stream fields](https://docs.victoriametrics.com/victorialogs/keyconcepts/#stream-fields).
 - `Table` - displays query results as a table.
