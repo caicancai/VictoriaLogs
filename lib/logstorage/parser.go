@@ -2374,6 +2374,11 @@ func tryParseIPv4CIDR(s string) (uint32, uint32, bool) {
 }
 
 func tryParseIPv6(s string) ([16]byte, bool) {
+	// IPv6 string length must be between 2 and 45 characters.
+	// This quickly rejects obviously invalid strings before doing more expensive checks.
+	if len(s) < 2 || len(s) > 45 {
+		return [16]byte{}, false
+	}
 	// Fast path: IPv6 addresses must contain ':'.
 	// This quickly rejects plain IPv4 and other obvious non-IPv6 strings
 	// without calling netip.ParseAddr, which is relatively expensive.
