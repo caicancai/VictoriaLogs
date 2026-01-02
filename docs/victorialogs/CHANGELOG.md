@@ -21,6 +21,8 @@ according to the following docs:
 
 ## tip
 
+* SECURITY: upgrade base docker image (Alpine) from 3.22.2 to 3.23.2. See [Alpine 3.23.2 release notes](https://www.alpinelinux.org/posts/Alpine-3.23.2-released.html).
+
 * FEATURE: add an ability to delete snapshots via `/internal/partition/snapshot/delete` endpoint. See [these docs](https://docs.victoriametrics.com/victorialogs/#partitions-lifecycle) and [#828](https://github.com/VictoriaMetrics/VictoriaLogs/issues/828).
 * FEATURE: [dashboards/internal](https://grafana.com/grafana/dashboards/24585): add Grafana dashboard for monitoring VictoriaLogs internal state. The source of the dashboard is available [here](https://github.com/VictoriaMetrics/VictoriaLogs/blob/master/dashboards/victorialogs-internal.json).
 * FEATURE: [LogsQL](https://docs.victoriametrics.com/victorialogs/logsql/): add `pattern_match_prefix()` and `pattern_match_suffx()` filters for matching the given pattern at the beginning or at the end of the log field value. See [these docs](https://docs.victoriametrics.com/victorialogs/logsql/#pattern-match-filter) and [#762](https://github.com/VictoriaMetrics/VictoriaLogs/issues/762).
