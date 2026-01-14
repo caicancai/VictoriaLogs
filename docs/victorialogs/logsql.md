@@ -400,7 +400,7 @@ Use `offset 0h` for filtering logs on the given time range at UTC time zone:
 _time:day_range[08:00, 18:00) offset 0h
 ```
 
-If logs outside the given per-day time range must be selected, then put 'NOT` or `-` in front of the `day_range` filter.
+If logs outside the given per-day time range must be selected, then put `NOT` or `-` in front of the `day_range` filter.
 For example, the following query selects logs outside working hours `[08:00 - 17:00]`:
 
 ```logsql
