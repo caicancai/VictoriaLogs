@@ -60,7 +60,10 @@ from the received Syslog lines:
 The `[STRUCTURED-DATA]` is parsed into fields with the `SD-ID.param1`, `SD-ID.param2`, ..., `SD-ID.paramN` names and the corresponding values
 according to [the specification](https://datatracker.ietf.org/doc/html/rfc5424#section-6.3).
 
-By default local timezone is used when parsing timestamps in `rfc3164` lines. This can be changed to any desired timezone via `-syslog.timezone` command-line flag.
+By default local timezone at the VictoriaLogs server is used when parsing timestamps in `rfc3164` lines.
+See [how to control local timezone at VictoriaLogs server](https://docs.victoriametrics.com/victorialogs/#server-side-timezone).
+
+The timezone for logs insgested over syslog protocol can be changed also via `-syslog.timezone` command-line flag.
 See [the list of supported timezone identifiers](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones). For example, the following command starts VictoriaLogs,
 which parses syslog timestamps in `rfc3164` using `Europe/Berlin` timezone:
 

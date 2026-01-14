@@ -337,6 +337,7 @@ For example, `_time:2023-04-25+05:30` matches all the logs on April 25, 2023 by 
 while `_time:2023-02-07:00` matches all the logs on February, 2023 by California time zone.
 
 If the timezone offset information is missing, then the local time zone of the host where VictoriaLogs runs is used.
+See [how to control the timezone at VictoriaLogs server](https://docs.victoriametrics.com/victorialogs/#server-side-timezone).
 For example, `_time:2023-10-20` matches all the logs for `2023-10-20` day according to the local time zone of the host where VictoriaLogs runs.
 
 It is possible to specify generic offset for the selected time range by appending `offset` after the `_time` filter. Examples:
@@ -370,7 +371,8 @@ See also:
 ### Day range filter
 
 `_time:day_range[start, end]` filter allows returning logs in the particular `start ... end` time for each day, where `start` and `end` have the format `hh:mm`.
-For example, the following query matches logs between `08:00` and `18:00` UTC every day:
+For example, the following query matches logs between `08:00` and `18:00` each day at the VictoriaLogs server-side timezone.
+See [how to change server-size timezone](https://docs.victoriametrics.com/victorialogs/#server-side-timezone).
 
 ```logsql
 _time:day_range[08:00, 18:00)
@@ -384,15 +386,29 @@ For example, the following query matches logs between `08:00` and `18:00`, exclu
 _time:day_range(08:00, 18:00]
 ```
 
-If the time range must be applied to other than UTC time zone, then add `offset <duration>`, where `<duration>` can have [any supported duration value](https://docs.victoriametrics.com/victorialogs/logsql/#duration-values).
+If the time range must be applied to other than the local time zone, then add `offset <duration>`,
+where `<duration>` can have [any supported duration value](https://docs.victoriametrics.com/victorialogs/logsql/#duration-values).
 For example, the following query selects logs between `08:00` and `18:00` at `+0200` time zone:
 
 ```logsql
-_time:day_range[08:00, 18:00) offset -2h
+_time:day_range[08:00, 18:00) offset 2h
 ```
 
-Performance tip: it is recommended to specify a regular [time filter](https://docs.victoriametrics.com/victorialogs/logsql/#time-filter) additionally to the `day_range` filter. For example, the following query selects logs
-between `08:00` and `18:00` every day for the last week:
+Use `offset 0h` for filtering logs on the given time range at UTC time zone:
+
+```logsql
+_time:day_range[08:00, 18:00) offset 0h
+```
+
+If logs outside the given per-day time range must be selected, then put 'NOT` or `-` in front of the `day_range` filter.
+For example, the following query selects logs outside working hours `[08:00 - 17:00]`:
+
+```logsql
+-_time:day_range[08:00, 17:00]
+```
+
+Performance tip: it is recommended to specify a regular [time filter](https://docs.victoriametrics.com/victorialogs/logsql/#time-filter)
+additionally to the `day_range` filter. For example, the following query selects logs between `08:00` and `18:00` every day for the last week:
 
 ```logsql
 _time:1w _time:day_range[08:00, 18:00)
@@ -405,7 +421,10 @@ See also:
 
 ### Week range filter
 
-`_time:week_range[start, end]` filter allows returning logs on the particular `start ... end` days for each week, where `start` and `end` can have the following values:
+`_time:week_range[start, end]` filter allows returning logs on the particular `start ... end` days for each week, at the local timezone for the VictoriaLogs server.
+See [how to control local timezone for VictoriaLogs](https://docs.victoriametrics.com/victorialogs/#server-side-timezone).
+
+The following values are supported for the `start` and `end`:
 
 - `Sun` or `Sunday`
 - `Mon` or `Monday`
@@ -415,7 +434,7 @@ See also:
 - `Fri` or `Friday`
 - `Sat` or `Saturday`
 
-For example, the following query matches logs between Monday and Friday by UTC:
+For example, the following query matches logs between Monday and Friday by local timezone at VictoriaLogs server:
 
 ```logsql
 _time:week_range[Mon, Fri]
@@ -429,18 +448,33 @@ For example, the following query matches logs between Sunday and Saturday, exclu
 _time:week_range(Sun, Sat)
 ```
 
-If the week range must be applied to other than UTC time zone, then add `offset <duration>`, where `<duration>` can have [any supported duration value](https://docs.victoriametrics.com/victorialogs/logsql/#duration-values).
+If the week range must be applied to other than the local time zone at VictoriaLogs server, then add `offset <duration>`,
+where `<duration>` can have [any supported duration value](https://docs.victoriametrics.com/victorialogs/logsql/#duration-values).
 For example, the following query selects logs between Monday and Friday at `+0200` time zone:
 
 ```logsql
-_time:week_range[Mon, Fri] offset -2h
+_time:week_range[Mon, Fri] offset 2h
 ```
 
-The `week_range` filter can be combined with [`day_range` filter](https://docs.victoriametrics.com/victorialogs/logsql/#day-range-filter) using [logical filters](https://docs.victoriametrics.com/victorialogs/logsql/#logical-filter). For example, the following query
-selects logs between `08:00` and `18:00` every day of the week excluding Sunday and Saturday:
+If logs must be selected on the giveen week days according to UTC, then use `offset 0h`:
+
+```logsql
+_time:week_range[Mon, Fri] offset 0h
+```
+
+The `week_range` filter can be combined with [`day_range` filter](https://docs.victoriametrics.com/victorialogs/logsql/#day-range-filter)
+using [logical filters](https://docs.victoriametrics.com/victorialogs/logsql/#logical-filter). For example, the following query
+selects logs between `08:00` and `18:00` every workday of the week:
 
 ```logsql
 _time:week_range[Mon, Fri] _time:day_range[08:00, 18:00)
+```
+
+If logs outside the given weekday range must be selected, then put `NOT` or `-` in front of the `week_range`. For example, the following
+query selects logs outside work days (e.g. logs for Saturday and Sunday):
+
+```logsql
+-_time:week_range[Mon, Fri]
 ```
 
 Performance tip: it is recommended to specify a regular [time filter](https://docs.victoriametrics.com/victorialogs/logsql/#time-filter) additionally to the `week_range` filter. For example, the following query selects logs

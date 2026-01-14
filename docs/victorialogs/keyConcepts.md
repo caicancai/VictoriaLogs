@@ -157,6 +157,7 @@ This field must be in one of the following formats:
   For example, `2023-06-20T15:32:10Z` or `2023-06-20 15:32:10.123456789+02:00`.
   If timezone information is missing (for example, `2023-06-20 15:32:10`),
   then the time is parsed in the local timezone of the host where VictoriaLogs runs.
+  See [how to control local timezone at VictoriaLogs server](https://docs.victoriametrics.com/victorialogs/#server-side-timezone).
 
 - Unix timestamp in seconds, milliseconds, microseconds or nanoseconds. For example, `1686026893` (seconds), `1686026893735` (milliseconds),
   `1686026893735321` (microseconds) or `1686026893735321098` (nanoseconds).
