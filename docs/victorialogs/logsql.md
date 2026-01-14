@@ -4899,6 +4899,15 @@ See also:
 - [`count`](https://docs.victoriametrics.com/victorialogs/logsql/#count-stats)
 - [`count_empty`](https://docs.victoriametrics.com/victorialogs/logsql/#count_empty-stats)
 
+## Subqueries
+
+LogsQL supports subqueries in the following places:
+
+- In [filters](https://docs.victoriametrics.com/victorialogs/logsql/#filters) - see [subquery filters](https://docs.victoriametrics.com/victorialogs/logsql/#subquery-filter).
+- In the following [pipes](https://docs.victoriametrics.com/victorialogs/logsql/#pipes):
+  - [`join` pipe](https://docs.victoriametrics.com/victorialogs/logsql/#join-pipe)
+  - [`union` pipe](https://docs.victoriametrics.com/victorialogs/logsql/#union-pipe)
+
 ## Stream context
 
 See [`stream_context` pipe](https://docs.victoriametrics.com/victorialogs/logsql/#stream_context-pipe).
@@ -5081,9 +5090,10 @@ Note that too large a number of parallel readers may result in excessive usage o
 
 ### `ignore_global_time_filter` query option
 
-When running via Web UI, Grafana, or [HTTP querying API](https://docs.victoriametrics.com/victorialogs/querying/#http-api) that may apply a global time range,
-VictoriaLogs injects a global `_time:[start,end]` filter into the query.
-Set `ignore_global_time_filter=true` to prevent injecting this global time filter.
+When running via Web UI, Grafana, or [HTTP querying API](https://docs.victoriametrics.com/victorialogs/querying/#http-api) that may apply a global time range
+via `start` and `end` query args, VictoriaLogs injects a global [`_time` filter](https://docs.victoriametrics.com/victorialogs/logsql/#time-filter)
+(`_time:[start,end]`) filter into the query and every [subquery](https://docs.victoriametrics.com/victorialogs/logsql/#subqueries).
+Set `ignore_global_time_filter=true` to prevent injecting this global time filter at the given query and all its' subqueries.
 
 For example, the following query preserves the original time logic in the query body without adding a global `_time` filter:
 
