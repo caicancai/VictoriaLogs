@@ -497,12 +497,23 @@ func TestParseDayRange(t *testing.T) {
 		}
 	}
 
-	f("[00:00, 24:00]", 0, nsecsPerDay-1, 0)
-	f("[10:20, 24:00]", 10*nsecsPerHour+20*nsecsPerMinute, nsecsPerDay-1, 0)
-	f("(00:00, 24:00)", 1, nsecsPerDay-2, 0)
-	f("[08:00, 18:00)", 8*nsecsPerHour, 18*nsecsPerHour-1, 0)
+	f("[00:00, 24:00] offset 0h", 0, nsecsPerDay-1, 0)
+	f("[10:20, 24:00] offset 0h", 10*nsecsPerHour+20*nsecsPerMinute, nsecsPerDay-1, 0)
+	f("(00:00, 24:00) offset 0h", 1, nsecsPerDay-2, 0)
+	f("[08:00, 18:00) offset 0h", 8*nsecsPerHour, 18*nsecsPerHour-1, 0)
 	f("[08:00, 18:00) offset 2h", 8*nsecsPerHour, 18*nsecsPerHour-1, 2*nsecsPerHour)
 	f("[08:00, 18:00) offset -2h", 8*nsecsPerHour, 18*nsecsPerHour-1, -2*nsecsPerHour)
+
+	// start equals end
+	f("[00:00, 00:00] offset 0h", 0, 0, 0)
+	f("(00:00, 00:00] offset 0h", 1, 0, 0)
+	f("[00:00, 00:00) offset 0h", 0, nsecsPerDay-1, 0)
+	f("(00:00, 00:00) offset 0h", 1, nsecsPerDay-1, 0)
+
+	// start is bigger than end
+	f("[18:00, 08:00) offset 0h", 18*nsecsPerHour, 8*nsecsPerHour-1, 0)
+	f("[18:00, 08:00) offset 2h", 18*nsecsPerHour, 8*nsecsPerHour-1, 2*nsecsPerHour)
+	f("[18:00, 08:00) offset -2h", 18*nsecsPerHour, 8*nsecsPerHour-1, -2*nsecsPerHour)
 }
 
 func TestParseWeekRange(t *testing.T) {
@@ -530,17 +541,29 @@ func TestParseWeekRange(t *testing.T) {
 		}
 	}
 
-	f("[Sun, Sat]", time.Sunday, time.Saturday, 0)
-	f("(Sun, Sat]", time.Monday, time.Saturday, 0)
-	f("(Sun, Sat)", time.Monday, time.Friday, 0)
-	f("[Sun, Sat)", time.Sunday, time.Friday, 0)
+	f("[Sun, Sat] offset 0h", time.Sunday, time.Saturday, 0)
+	f("(Sun, Sat] offset 0h", time.Monday, time.Saturday, 0)
+	f("(Sun, Sat) offset 0h", time.Monday, time.Friday, 0)
+	f("[Sun, Sat) offset 0h", time.Sunday, time.Friday, 0)
 
-	f(`[Mon, Tue]`, time.Monday, time.Tuesday, 0)
-	f(`[Wed, Thu]`, time.Wednesday, time.Thursday, 0)
-	f(`[Fri, Sat]`, time.Friday, time.Saturday, 0)
+	f(`[Mon, Tue] offset 0h`, time.Monday, time.Tuesday, 0)
+	f(`[Wed, Thu] offset 0h`, time.Wednesday, time.Thursday, 0)
+	f(`[Fri, Sat] offset 0h`, time.Friday, time.Saturday, 0)
 
 	f(`[Mon, Fri] offset 2h`, time.Monday, time.Friday, 2*nsecsPerHour)
 	f(`[Mon, Fri] offset -2h`, time.Monday, time.Friday, -2*nsecsPerHour)
+
+	// start equals end
+	f(`[Mon, Mon] offset 0h`, time.Monday, time.Monday, 0)
+	f(`[Mon, Mon) offset 0h`, time.Monday, time.Sunday, 0)
+	f(`(Mon, Mon] offset 0h`, time.Tuesday, time.Monday, 0)
+	f(`(Mon, Mon) offset 0h`, time.Tuesday, time.Sunday, 0)
+	f(`(Sat, Sun) offset 0h`, time.Sunday, time.Saturday, 0)
+
+	// start is bigger than end
+	f(`[Fri, Mon] offset 0h`, time.Friday, time.Monday, 0)
+	f(`[Fri, Mon] offset 2h`, time.Friday, time.Monday, 2*nsecsPerHour)
+	f(`[Fri, Mon] offset -2h`, time.Friday, time.Monday, -2*nsecsPerHour)
 }
 
 func TestParseTimeDuration(t *testing.T) {

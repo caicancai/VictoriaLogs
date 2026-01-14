@@ -1268,15 +1268,36 @@ func updateFilterWithTimeOffset(f filter, timeOffset int64) filter {
 	}
 
 	visitFunc := func(f filter) bool {
-		_, ok := f.(*filterTime)
-		return ok
+		switch f.(type) {
+		case *filterTime:
+			return true
+		case *filterDayRange:
+			return true
+		case *filterWeekRange:
+			return true
+		default:
+			return false
+		}
 	}
 	copyFunc := func(f filter) (filter, error) {
-		ft := f.(*filterTime)
-		ftCopy := *ft
-		ftCopy.minTimestamp = subNoOverflowInt64(ft.minTimestamp, timeOffset)
-		ftCopy.maxTimestamp = subNoOverflowInt64(ft.maxTimestamp, timeOffset)
-		return &ftCopy, nil
+		switch ft := f.(type) {
+		case *filterTime:
+			ftCopy := *ft
+			ftCopy.minTimestamp = subNoOverflowInt64(ft.minTimestamp, timeOffset)
+			ftCopy.maxTimestamp = subNoOverflowInt64(ft.maxTimestamp, timeOffset)
+			return &ftCopy, nil
+		case *filterDayRange:
+			ftCopy := *ft
+			ft.offset = subNoOverflowInt64(ft.offset, -timeOffset)
+			return &ftCopy, nil
+		case *filterWeekRange:
+			ftCopy := *ft
+			ft.offset = subNoOverflowInt64(ft.offset, -timeOffset)
+			return &ftCopy, nil
+		default:
+			logger.Panicf("BUG: unexpected filter passed to copyFunc: %T; [%s]", f, f)
+			return f, nil
+		}
 	}
 	f, err := copyFilter(f, visitFunc, copyFunc)
 	if err != nil {
@@ -3118,7 +3139,7 @@ func parseFilterDayRange(lex *lexer) (*filterDayRange, error) {
 		return nil, fmt.Errorf("missing ']' or ')' after day_range filter")
 	}
 
-	offset := int64(0)
+	offset := timeutil.GetLocalTimezoneOffsetNsecs()
 	offsetStr := ""
 	if lex.isKeyword("offset") {
 		lex.nextToken()
@@ -3132,9 +3153,15 @@ func parseFilterDayRange(lex *lexer) (*filterDayRange, error) {
 
 	if startBrace == "(" {
 		start++
+		if start > nsecsPerDay {
+			start = 0
+		}
 	}
 	if endBrace == ")" {
 		end--
+		if end < 0 {
+			end = nsecsPerDay - 1
+		}
 	}
 
 	fr := &filterDayRange{
@@ -3190,7 +3217,7 @@ func parseFilterWeekRange(lex *lexer) (*filterWeekRange, error) {
 		return nil, fmt.Errorf("missing ']' or ')' after week_range filter")
 	}
 
-	offset := int64(0)
+	offset := timeutil.GetLocalTimezoneOffsetNsecs()
 	offsetStr := ""
 	if lex.isKeyword("offset") {
 		lex.nextToken()
@@ -3204,9 +3231,15 @@ func parseFilterWeekRange(lex *lexer) (*filterWeekRange, error) {
 
 	if startBrace == "(" {
 		startDay++
+		if startDay > time.Saturday {
+			startDay = time.Sunday
+		}
 	}
 	if endBrace == ")" {
 		endDay--
+		if endDay < time.Sunday {
+			endDay = time.Saturday
+		}
 	}
 
 	fr := &filterWeekRange{

@@ -551,6 +551,18 @@ You can define flags using environment variables, and you can also
 reference environment variables as values, allowing you to reuse or dynamically inject configuration values at application startup.
 See [these docs](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#environment-variables) for details.
 
+## Server-side timezone
+
+VictoriaLogs uses server-side timezone in the following cases:
+
+- If the [`_time` field](https://docs.victoriametrics.com/victorialogs/keyconcepts/#time-field) in the [ingested logs](https://docs.victoriametrics.com/victorialogs/data-ingestion/)
+  doesn't contain explicit timezone information.
+- If the [`_time` filter](https://docs.victoriametrics.com/victorialogs/logsql/#time-filter), [`day_range` filter](https://docs.victoriametrics.com/victorialogs/logsql/#day-range-filter)
+  or [`week_range` filter](https://docs.victoriametrics.com/victorialogs/logsql/#week-range-filter) do not contain explicit timezone information.
+
+VictoriaLogs obtains the local timezone from the `TZ` environment variable. It expects valid [IANA Time Zone identifiers](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
+in the `TZ` environment variable. Set `TZ` environment variable to an empty string - `TZ=""` - for using UTC.
+
 ## List of command-line flags
 
 Pass `-help` to VictoriaLogs in order to see the list of supported command-line flags with their description:
