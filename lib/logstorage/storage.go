@@ -299,7 +299,7 @@ func (s *Storage) PartitionList() []string {
 //
 // The snaphsot name must have YYYYMMDD format.
 //
-// The function returns an absolute path to the created snapshot on success.
+// The function returns path to the created snapshot on success.
 func (s *Storage) PartitionSnapshotCreate(name string) (string, error) {
 	ptw := func() *partitionWrapper {
 		s.partitionsLock.Lock()
@@ -324,7 +324,7 @@ func (s *Storage) PartitionSnapshotCreate(name string) (string, error) {
 	return snapshotPath, nil
 }
 
-// PartitionSnapshotList returns a list of absolute paths to all the snapshots across active partitions.
+// PartitionSnapshotList returns a list of paths to all the snapshots across active partitions.
 func (s *Storage) PartitionSnapshotList() []string {
 	s.partitionsLock.Lock()
 	ptws := append([]*partitionWrapper{}, s.partitions...)
@@ -345,85 +345,56 @@ func (s *Storage) PartitionSnapshotList() []string {
 		for _, de := range des {
 			name := de.Name()
 			if err := snapshotutil.Validate(name); err != nil {
-				logger.Warnf("unsupported snapshot name %q at %q: %s", name, snapshotsPath)
+				logger.Warnf("unsupported snapshot name %q at %q: %s", name, snapshotsPath, err)
 				continue
 			}
 
 			path := filepath.Join(snapshotsPath, name)
-			snapshotPath, err := filepath.Abs(path)
-			if err != nil {
-				logger.Panicf("FATAL: cannot obtain absolute path for %q: %s", path, err)
-			}
-			snapshotPaths = append(snapshotPaths, snapshotPath)
+			snapshotPaths = append(snapshotPaths, path)
 		}
 	}
 
 	for _, ptw := range ptws {
 		ptw.decRef()
 	}
+
+	sort.Strings(snapshotPaths)
 
 	return snapshotPaths
 }
 
-// PartitionSnapshotDelete removes the snapshot located at the given absolute path if it belongs to an active partition.
-//
-// The snapshotPath must match the directory returned by PartitionSnapshotCreate() or PartitionSnapshotList().
+// PartitionSnapshotDelete removes the snapshot located at the given snapshotPath if it belongs to an active partition.
 func (s *Storage) PartitionSnapshotDelete(snapshotPath string) error {
-	if snapshotPath == "" {
-		return fmt.Errorf("snapshot path cannot be empty")
+	snapshotName := filepath.Base(snapshotPath)
+	if err := snapshotutil.Validate(snapshotName); err != nil {
+		return fmt.Errorf("unsupported snapshot name %q at %q: %s", snapshotName, snapshotPath, err)
 	}
-	if !filepath.IsAbs(snapshotPath) {
-		return fmt.Errorf("snapshot path %q must be absolute", snapshotPath)
-	}
-	snapshotPath = filepath.Clean(snapshotPath)
+
 	snapshotDir := filepath.Dir(snapshotPath)
 	if filepath.Base(snapshotDir) != snapshotsDirname {
 		return fmt.Errorf("snapshot path %q must point to a directory inside %q", snapshotPath, snapshotsDirname)
 	}
-	snapshotName := filepath.Base(snapshotPath)
-	if err := snapshotutil.Validate(snapshotName); err != nil {
-		return fmt.Errorf("invalid snapshot name %q: %w", snapshotName, err)
-	}
+	partitionPath := filepath.Dir(snapshotDir)
 
-	s.partitionsLock.Lock()
-	ptws := append([]*partitionWrapper{}, s.partitions...)
-	for _, ptw := range ptws {
-		ptw.incRef()
-	}
-	s.partitionsLock.Unlock()
+	ptw := func() *partitionWrapper {
+		s.partitionsLock.Lock()
+		defer s.partitionsLock.Unlock()
 
-	var targetPtw *partitionWrapper
-	snapshotDirAbs := snapshotDir
-
-	for _, ptw := range ptws {
-		snapshotsDir := filepath.Join(ptw.pt.path, snapshotsDirname)
-		snapshotsDirAbs, err := filepath.Abs(snapshotsDir)
-		if err != nil {
-			logger.Panicf("FATAL: cannot obtain absolute path for %q: %s", snapshotsDir, err)
+		for _, ptw := range s.partitions {
+			if partitionPath == ptw.pt.path {
+				ptw.incRef()
+				return ptw
+			}
 		}
-		if snapshotsDirAbs != snapshotDirAbs {
-			continue
-		}
-		targetPtw = ptw
-		break
-	}
+		return nil
+	}()
 
-	for _, ptw := range ptws {
-		if ptw == targetPtw {
-			continue
-		}
-		ptw.decRef()
+	if ptw == nil {
+		return fmt.Errorf("partition path %q cannot be found across active partitions", partitionPath)
 	}
+	defer ptw.decRef()
 
-	if targetPtw == nil {
-		return fmt.Errorf("snapshot path %q doesn't belong to any active partition", snapshotPath)
-	}
-	defer targetPtw.decRef()
-
-	if _, err := targetPtw.pt.mustDeleteSnapshot(snapshotName); err != nil {
-		return err
-	}
-	return nil
+	return ptw.pt.deleteSnapshot(snapshotName)
 }
 
 // DeleteRunTask starts deletion of logs according to the given filter f for the given tenantIDs.

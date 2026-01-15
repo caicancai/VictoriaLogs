@@ -21,6 +21,7 @@ according to the following docs:
 
 ## tip
 
+* FEATURE: add an ability to delete snapshots via `/internal/partition/snapshot/delete` endpoint. See [these docs](https://docs.victoriametrics.com/victorialogs/#partitions-lifecycle) and [#828](https://github.com/VictoriaMetrics/VictoriaLogs/issues/828).
 * FEATURE: [dashboards/internal](https://grafana.com/grafana/dashboards/24585): add Grafana dashboard for monitoring VictoriaLogs internal state. The source of the dashboard is available [here](https://github.com/VictoriaMetrics/VictoriaLogs/blob/master/dashboards/victorialogs-internal.json).
 
 * BUGFIX: [LogsQL](https://docs.victoriametrics.com/victorialogs/logsql/): properly apply time offset according to the docs for the [`day_range`](https://docs.victoriametrics.com/victorialogs/logsql/#day-range-filter) and [`week_range`](https://docs.victoriametrics.com/victorialogs/logsql/#week-range-filter) filters. Previously `offset 2h` was incorrectly translated into `-02:00` timezone offset instead of the expected `+02:00` timezone offset. See [#796](https://github.com/VictoriaMetrics/VictoriaLogs/issues/796).

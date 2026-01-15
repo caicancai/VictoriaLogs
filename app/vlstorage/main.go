@@ -392,6 +392,11 @@ func processPartitionSnapshotCreate(w http.ResponseWriter, r *http.Request) bool
 	}
 
 	name := r.FormValue("name")
+	if name == "" {
+		httpserver.Errorf(w, r, "missing `name` query arg")
+		return true
+	}
+
 	snapshotPath, err := localStorage.PartitionSnapshotCreate(name)
 	if err != nil {
 		httpserver.Errorf(w, r, "%s", err)

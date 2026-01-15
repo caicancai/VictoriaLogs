@@ -239,11 +239,13 @@ VictoriaLogs supports the following HTTP API endpoints at `victoria-logs:9428` a
   Detached partitions are automatically attached after VictoriaLogs restart if the corresponding subdirectories at `<-storageDataPath>/partitions/` aren't removed.
 - `/internal/partition/list` - returns JSON-encoded list of currently active partitions, which can be passed to `/internal/partition/detach` endpoint via `name` query arg.
 - `/internal/partition/snapshot/create?name=YYYYMMDD` - creates a [snapshot](https://medium.com/@valyala/how-victoriametrics-makes-instant-snapshots-for-multi-terabyte-time-series-data-e1f3fb0e0282)
-  for the partition for the given day `YYYYMMDD`. The endpoint returns a JSON string with the absolute filesystem path to the created snapshot. It is safe to make backups from
-  the created snapshots according to [these instructions](https://docs.victoriametrics.com/victorialogs/#backup-and-restore). Snapshots can be removed via `/internal/partition/snapshot/delete?path=<snapshot-path>`
-  endpoint (recommended) or manually with `rm -rf <-storageDataPath>/partitions/YYYYMMDD/snapshots/<snapshot-name>`. It is recommended removing unneeded snapshots on a regular basis in order to free up storage space occupied by these snapshots.
-- `/internal/partition/snapshot/list` - returns JSON-encoded list of absolute paths to per-day partition snapshots created via `/internal/partition/snapshot/create`. The snapshot name equals the last path segment of every returned path.
-- `/internal/partition/snapshot/delete?path=<snapshot-path>` - deletes a snapshot created via `/internal/partition/snapshot/create`. The `<snapshot-path>` can be taken directly from the output of `/internal/partition/snapshot/list`.
+  for the partition for the given day `YYYYMMDD`. The endpoint returns a JSON string with the path to the created snapshot. It is safe to make backups from
+  the created snapshots according to [these instructions](https://docs.victoriametrics.com/victorialogs/#backup-and-restore).
+  Snapshots can be removed via `/internal/partition/snapshot/delete?path=<snapshot-path>`.
+  It is recommended removing unneeded snapshots on a regular basis in order to free up storage space occupied by these snapshots.
+- `/internal/partition/snapshot/list` - returns JSON-encoded list of paths to per-day partition snapshots created via `/internal/partition/snapshot/create`.
+- `/internal/partition/snapshot/delete?path=<snapshot-path>` - deletes a snapshot created via `/internal/partition/snapshot/create`.
+  The `<snapshot-path>` can be taken directly from the output of `/internal/partition/snapshot/list`.
 
 These endpoints can be protected from unauthorized access via `-partitionManageAuthKey` [command-line flag](https://docs.victoriametrics.com/victorialogs/#list-of-command-line-flags).
 
@@ -386,7 +388,7 @@ VictoriaLogs stores data into independent per-day partitions. Every partition is
 The following steps must be performed to make a backup of the given `YYYYMMDD` partition:
 
 1. To create a snapshot for the given per-day partition via `/internal/partition/snapshot/create?name=YYYYMMDD` HTTP endpoint (see [partitions lifecycle](https://docs.victoriametrics.com/victorialogs/#partitions-lifecycle) docs).
-   This endpoint returns an absolute filesystem path to the created snapshot - `<path-to-snapshot>`.
+   This endpoint returns a path to the created snapshot - `<path-to-snapshot>`.
 
 1. To backup the created snapshot with [`rsync`](https://en.wikipedia.org/wiki/Rsync):
 
@@ -396,9 +398,7 @@ The following steps must be performed to make a backup of the given `YYYYMMDD` p
 
    The `--delete` option is required in the command above in order to ensures that the backup contains the full copy of the original data without superfluous files.
 
-1. To remove the snapshot with `/internal/partition/snapshot/delete?path=<path-to-snapshot>` endpoint (recommended) or `rm -rf <path-to-snapshot>` command.
-   It is important to remove unneeded snapshots in order to free up storage space.
-
+1. To remove the snapshot with `/internal/partition/snapshot/delete?path=<path-to-snapshot>` endpoint. It is important to remove unneeded snapshots in order to free up storage space.
 
 The following steps must be performed for restoring the partition data from backup:
 
