@@ -403,6 +403,14 @@ func processPartitionSnapshotCreate(w http.ResponseWriter, r *http.Request) bool
 		return true
 	}
 
+	// Verify whether the client already closed the connection.
+	// In this case it is better to drop the created partition, since the client isn't interested in it.
+	if err := r.Context().Err(); err != nil {
+		logger.Infof("deleting already created snapshot at %s because the client canceled the request", name)
+		localStorage.PartitionSnapshotDelete(snapshotPath)
+		return true
+	}
+
 	writeJSONResponse(w, snapshotPath)
 	return true
 }
