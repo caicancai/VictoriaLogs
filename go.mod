@@ -1,6 +1,6 @@
 module github.com/VictoriaMetrics/VictoriaLogs
 
-go 1.25.5
+go 1.25.6
 
 replace github.com/VictoriaMetrics/VictoriaMetrics => github.com/VictoriaMetrics/VictoriaMetrics v1.132.1-0.20251216144623-b6bc1860136e
 

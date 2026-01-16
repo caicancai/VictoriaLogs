@@ -22,6 +22,7 @@ according to the following docs:
 ## tip
 
 * SECURITY: upgrade base docker image (Alpine) from 3.22.2 to 3.23.2. See [Alpine 3.23.2 release notes](https://www.alpinelinux.org/posts/Alpine-3.23.2-released.html).
+* SECURITY: upgrade Go builder from Go1.25.5 to Go1.25.6. See [the list of issues addressed in Go1.25.6](https://github.com/golang/go/issues?q=milestone%3AGo1.25.6%20label%3ACherryPickApproved).
 
 * FEATURE: add an ability to delete snapshots via `/internal/partition/snapshot/delete` endpoint. See [these docs](https://docs.victoriametrics.com/victorialogs/#partitions-lifecycle) and [#828](https://github.com/VictoriaMetrics/VictoriaLogs/issues/828).
 * FEATURE: [dashboards/internal](https://grafana.com/grafana/dashboards/24585): add Grafana dashboard for monitoring VictoriaLogs internal state. The source of the dashboard is available [here](https://github.com/VictoriaMetrics/VictoriaLogs/blob/master/dashboards/victorialogs-internal.json).
