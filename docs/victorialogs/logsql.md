@@ -764,10 +764,14 @@ See also:
 
 ### Pattern match filter
 
-VictoriaLogs supports filtering logs by patterns with the `pattern_match("pattern")` filter. This filter matches logs where
-[`_msg` field](https://docs.victoriametrics.com/victorialogs/keyconcepts/#message-field) contains the given `"pattern"`.
+VictoriaLogs supports filtering logs by patterns with the following filters:
 
-The filter can be applied to any given log field with the `log_field:pattern_match("pattern")` syntax.
+- `pattern_match("pattern")` - matches the given `pattern` for any part of the [`_msg`](https://docs.victoriametrics.com/victorialogs/keyconcepts/#message-field)
+- `pattern_match_full("pattern")` - matches the given `pattern` for the whole [`_msg`](https://docs.victoriametrics.com/victorialogs/keyconcepts/#message-field)
+- `pattern_match_prefix("pattern")` - matches the given `pattern` at the begining of the [`_msg`](https://docs.victoriametrics.com/victorialogs/keyconcepts/#message-field)
+- `pattern_match_suffix("pattern")` - matches the given `pattern` at the end of the [`_msg`](https://docs.victoriametrics.com/victorialogs/keyconcepts/#message-field).
+
+These filters can be applied to any given log field with the `log_field:pattern_match("pattern")` syntax.
 
 The `"pattern"` must contain the text to match, plus arbitrary number of the following placeholders:
 
@@ -787,8 +791,6 @@ For example, the following filter matches `_msg` field with the `<arbitrary_pref
 ```logsql
 pattern_match("user_id=<N>, ip=<IP4>, time=<DATETIME>")
 ```
-
-If you need to match the whole `_msg` field value, then use the `pattern_match_full("pattern")` filter.
 
 See also:
 

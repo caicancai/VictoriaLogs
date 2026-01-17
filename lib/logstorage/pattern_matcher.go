@@ -8,10 +8,20 @@ import (
 )
 
 type patternMatcher struct {
-	isFull       bool
+	pmo patternMatcherOption
+
 	separators   []string
 	placeholders []patternMatcherPlaceholder
 }
+
+type patternMatcherOption byte
+
+const (
+	patternMatcherOptionAny    = patternMatcherOption(0)
+	patternMatcherOptionFull   = patternMatcherOption(1)
+	patternMatcherOptionPrefix = patternMatcherOption(2)
+	patternMatcherOptionSuffix = patternMatcherOption(3)
+)
 
 func (pm *patternMatcher) String() string {
 	var a []string
@@ -83,7 +93,7 @@ func (ph patternMatcherPlaceholder) String() string {
 	}
 }
 
-func newPatternMatcher(s string, isFull bool) *patternMatcher {
+func newPatternMatcher(s string, pmo patternMatcherOption) *patternMatcher {
 	var separators []string
 	var placeholders []patternMatcherPlaceholder
 
@@ -119,40 +129,53 @@ func newPatternMatcher(s string, isFull bool) *patternMatcher {
 	separators = append(separators, separator)
 
 	return &patternMatcher{
-		isFull:       isFull,
+		pmo:          pmo,
 		separators:   separators,
 		placeholders: placeholders,
 	}
 }
 
 // Match returns true if s matches the given pm.
-//
-// if pm.isFull is set, then the s must match pm in full, from the beginning to the end.
-// Otherwise the pm may be matched by any substring of s.
 func (pm *patternMatcher) Match(s string) bool {
-	if pm.isFull {
-		end := pm.indexEnd(s, 0)
+	switch pm.pmo {
+	case patternMatcherOptionAny:
+		end := pm.indexEnd(s)
+		return end >= 0
+	case patternMatcherOptionFull:
+		end := pm.indexEndAtOffset(s, 0)
 		return end == len(s)
+	case patternMatcherOptionPrefix:
+		end := pm.indexEndAtOffset(s, 0)
+		return end >= 0
+	case patternMatcherOptionSuffix:
+		end := pm.indexEnd(s)
+		return end == len(s) || end == 0 && pm.isEmpty()
+	default:
+		logger.Panicf("BUG: unexpected pmo=%d", pm.pmo)
+		return false
 	}
-	return pm.matchSubstring(s)
 }
 
-func (pm *patternMatcher) matchSubstring(s string) bool {
+func (pm *patternMatcher) isEmpty() bool {
+	return len(pm.separators) == 1 && pm.separators[0] == ""
+}
+
+func (pm *patternMatcher) indexEnd(s string) int {
 	offset := 0
 	for {
-		start := pm.indexPatternStart(s, offset)
+		start := pm.indexStartAtOffset(s, offset)
 		if start < 0 {
-			return false
+			return -1
 		}
-		end := pm.indexEnd(s, start)
+		end := pm.indexEndAtOffset(s, start)
 		if end >= 0 {
-			return true
+			return end
 		}
 		offset = start + 1
 	}
 }
 
-func (pm *patternMatcher) indexPatternStart(s string, offset int) int {
+func (pm *patternMatcher) indexStartAtOffset(s string, offset int) int {
 	if firstSep := pm.separators[0]; firstSep != "" {
 		n := strings.Index(s[offset:], firstSep)
 		if n < 0 {
@@ -172,7 +195,7 @@ func (pm *patternMatcher) indexPatternStart(s string, offset int) int {
 	return indexNumStart(s, offset)
 }
 
-func (pm *patternMatcher) indexEnd(s string, start int) int {
+func (pm *patternMatcher) indexEndAtOffset(s string, start int) int {
 	placeholders := pm.placeholders
 
 	offset := start
@@ -188,7 +211,7 @@ func (pm *patternMatcher) indexEnd(s string, start int) int {
 			return offset
 		}
 
-		offset = placeholders[i].indexEnd(s, offset)
+		offset = placeholders[i].indexEndAtOffset(s, offset)
 		if offset < 0 {
 			return -1
 		}
@@ -196,7 +219,7 @@ func (pm *patternMatcher) indexEnd(s string, start int) int {
 	return offset
 }
 
-func (ph patternMatcherPlaceholder) indexEnd(s string, start int) int {
+func (ph patternMatcherPlaceholder) indexEndAtOffset(s string, start int) int {
 	switch ph {
 	case patternMatcherPlaceholderNum:
 		return indexPlaceholderNumEnd(s, start)
