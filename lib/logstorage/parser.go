@@ -2065,9 +2065,13 @@ func parseFilterGeneric(lex *lexer, fieldName string) (filter, error) {
 	case lex.isKeyword("lt_field"):
 		return parseFilterLtField(lex, fieldName)
 	case lex.isKeyword("pattern_match"):
-		return parseFilterPatternMatch(lex, fieldName)
+		return parseFilterPatternMatch(lex, fieldName, patternMatcherOptionAny)
 	case lex.isKeyword("pattern_match_full"):
-		return parseFilterPatternMatch(lex, fieldName)
+		return parseFilterPatternMatch(lex, fieldName, patternMatcherOptionFull)
+	case lex.isKeyword("pattern_match_prefix"):
+		return parseFilterPatternMatch(lex, fieldName, patternMatcherOptionPrefix)
+	case lex.isKeyword("pattern_match_suffix"):
+		return parseFilterPatternMatch(lex, fieldName, patternMatcherOptionSuffix)
 	case lex.isKeyword("range"):
 		return parseFilterRange(lex, fieldName)
 	case lex.isKeyword("re"):
@@ -2271,7 +2275,7 @@ func parseFilterStringRange(lex *lexer, fieldName string) (filter, error) {
 }
 
 func parseFilterValueType(lex *lexer, fieldName string) (filter, error) {
-	return parseFuncArg(lex, fieldName, func(arg string) (filter, error) {
+	return parseFuncArg(lex, fieldName, func(_, arg string) (filter, error) {
 		fv := &filterValueType{
 			fieldName: getCanonicalColumnName(fieldName),
 			valueType: arg,
@@ -2428,7 +2432,7 @@ func parseFilterSequence(lex *lexer, fieldName string) (filter, error) {
 }
 
 func parseFilterEqField(lex *lexer, fieldName string) (filter, error) {
-	return parseFuncArg(lex, fieldName, func(arg string) (filter, error) {
+	return parseFuncArg(lex, fieldName, func(_, arg string) (filter, error) {
 		fe := &filterEqField{
 			fieldName:      getCanonicalColumnName(fieldName),
 			otherFieldName: arg,
@@ -2438,7 +2442,7 @@ func parseFilterEqField(lex *lexer, fieldName string) (filter, error) {
 }
 
 func parseFilterLeField(lex *lexer, fieldName string) (filter, error) {
-	return parseFuncArg(lex, fieldName, func(arg string) (filter, error) {
+	return parseFuncArg(lex, fieldName, func(_, arg string) (filter, error) {
 		fe := &filterLeField{
 			fieldName:      getCanonicalColumnName(fieldName),
 			otherFieldName: arg,
@@ -2448,7 +2452,7 @@ func parseFilterLeField(lex *lexer, fieldName string) (filter, error) {
 }
 
 func parseFilterLtField(lex *lexer, fieldName string) (filter, error) {
-	return parseFuncArg(lex, fieldName, func(arg string) (filter, error) {
+	return parseFuncArg(lex, fieldName, func(_, arg string) (filter, error) {
 		fe := &filterLeField{
 			fieldName:      getCanonicalColumnName(fieldName),
 			otherFieldName: arg,
@@ -2476,19 +2480,19 @@ func parseFilterExact(lex *lexer, fieldName string) (filter, error) {
 	})
 }
 
-func parseFilterPatternMatch(lex *lexer, fieldName string) (filter, error) {
-	isFull := lex.isKeyword("pattern_match_full")
-	return parseFuncArg(lex, fieldName, func(arg string) (filter, error) {
+func parseFilterPatternMatch(lex *lexer, fieldName string, pmo patternMatcherOption) (filter, error) {
+	return parseFuncArg(lex, fieldName, func(funcName, arg string) (filter, error) {
 		fp := &filterPatternMatch{
 			fieldName: getCanonicalColumnName(fieldName),
-			pm:        newPatternMatcher(arg, isFull),
+			funcName:  funcName,
+			pm:        newPatternMatcher(arg, pmo),
 		}
 		return fp, nil
 	})
 }
 
 func parseFilterRegexp(lex *lexer, fieldName string) (filter, error) {
-	return parseFuncArg(lex, fieldName, func(arg string) (filter, error) {
+	return parseFuncArg(lex, fieldName, func(_, arg string) (filter, error) {
 		return newFilterRegexp(fieldName, arg)
 	})
 }
@@ -2823,12 +2827,12 @@ func parseNumber(lex *lexer) (float64, string, error) {
 	return 0, s, fmt.Errorf("cannot parse %q as float64", s)
 }
 
-func parseFuncArg(lex *lexer, fieldName string, callback func(arg string) (filter, error)) (filter, error) {
+func parseFuncArg(lex *lexer, fieldName string, callback func(funcName, arg string) (filter, error)) (filter, error) {
 	return parseFuncArgs(lex, fieldName, func(funcName string, args []string) (filter, error) {
 		if len(args) != 1 {
 			return nil, fmt.Errorf("unexpected number of args for %s(); got %d; want 1", funcName, len(args))
 		}
-		return callback(args[0])
+		return callback(funcName, args[0])
 	})
 }
 
@@ -3864,6 +3868,8 @@ var reservedKeywords = func() map[string]struct{} {
 		"lt_field",
 		"pattern_match",
 		"pattern_match_full",
+		"pattern_match_prefix",
+		"pattern_match_suffix",
 		"range",
 		"re",
 		"seq",
