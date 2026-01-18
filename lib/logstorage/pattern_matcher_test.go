@@ -161,6 +161,11 @@ func TestPatternMatcherMatch(t *testing.T) {
 	f(`"baz": <N>}`, `{"foo":"bar", "baz": 123}`, patternMatcherOptionSuffix, true)
 	f(`"baz": <N>`, `{"foo":"bar", "baz": 123}`, patternMatcherOptionSuffix, false)
 
+	// match the suffix not at the end
+	f("foo:<N>", `abc foo:123 abc foo:42`, patternMatcherOptionSuffix, true)
+	f("foo:<N>", `abc foo:123 abc foo:`, patternMatcherOptionSuffix, false)
+	f("foo:<N>", `abc foo:123 abc`, patternMatcherOptionSuffix, false)
+
 	// regression: leading separator present many times but placeholder doesn't match after it
 	f("xx<N>", "xxxxxxxxxxxxxxxx", patternMatcherOptionAny, false)
 	f("xx<N>", "xxxxxxxxxxxxxxxx", patternMatcherOptionFull, false)
