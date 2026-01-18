@@ -139,7 +139,7 @@ func newPatternMatcher(s string, pmo patternMatcherOption) *patternMatcher {
 func (pm *patternMatcher) Match(s string) bool {
 	switch pm.pmo {
 	case patternMatcherOptionAny:
-		end := pm.indexEnd(s)
+		_, end := pm.indexStartEnd(s)
 		return end >= 0
 	case patternMatcherOptionFull:
 		end := pm.indexEndAtOffset(s, 0)
@@ -148,8 +148,16 @@ func (pm *patternMatcher) Match(s string) bool {
 		end := pm.indexEndAtOffset(s, 0)
 		return end >= 0
 	case patternMatcherOptionSuffix:
-		end := pm.indexEnd(s)
-		return end == len(s) || end == 0 && pm.isEmpty()
+		for {
+			start, end := pm.indexStartEnd(s)
+			if end < 0 {
+				return false
+			}
+			if end == len(s) || end == 0 && pm.isEmpty() {
+				return true
+			}
+			s = s[start+1:]
+		}
 	default:
 		logger.Panicf("BUG: unexpected pmo=%d", pm.pmo)
 		return false
@@ -160,16 +168,16 @@ func (pm *patternMatcher) isEmpty() bool {
 	return len(pm.separators) == 1 && pm.separators[0] == ""
 }
 
-func (pm *patternMatcher) indexEnd(s string) int {
+func (pm *patternMatcher) indexStartEnd(s string) (int, int) {
 	offset := 0
 	for {
 		start := pm.indexStartAtOffset(s, offset)
 		if start < 0 {
-			return -1
+			return -1, -1
 		}
 		end := pm.indexEndAtOffset(s, start)
 		if end >= 0 {
-			return end
+			return start, end
 		}
 		offset = start + 1
 	}
