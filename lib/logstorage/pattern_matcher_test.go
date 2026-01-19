@@ -165,6 +165,8 @@ func TestPatternMatcherMatch(t *testing.T) {
 	f("foo:<N>", `abc foo:123 abc foo:42`, patternMatcherOptionSuffix, true)
 	f("foo:<N>", `abc foo:123 abc foo:`, patternMatcherOptionSuffix, false)
 	f("foo:<N>", `abc foo:123 abc`, patternMatcherOptionSuffix, false)
+	f("foo:<N> xx", `abc foo:123 xx foo:42 xx`, patternMatcherOptionSuffix, true)
+	f("foo:<N> xx", `abc foo:123 xx foo:42`, patternMatcherOptionSuffix, false)
 
 	// regression: leading separator present many times but placeholder doesn't match after it
 	f("xx<N>", "xxxxxxxxxxxxxxxx", patternMatcherOptionAny, false)
