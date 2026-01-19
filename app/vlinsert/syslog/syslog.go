@@ -437,7 +437,13 @@ func processStream(protocol string, r io.Reader, compressMethod string, useLocal
 }
 
 func processStreamInternal(r io.Reader, compressMethod string, useLocalTimestamp bool, remoteIP string, lmp insertutil.LogMessageProcessor) error {
-	reader, err := protoparserutil.GetUncompressedReader(r, compressMethod)
+	wcr, err := writeconcurrencylimiter.GetReader(r)
+	if err != nil {
+		return err
+	}
+	defer writeconcurrencylimiter.PutReader(wcr)
+
+	reader, err := protoparserutil.GetUncompressedReader(wcr, compressMethod)
 	if err != nil {
 		return fmt.Errorf("cannot decode syslog data: %w", err)
 	}
@@ -447,16 +453,12 @@ func processStreamInternal(r io.Reader, compressMethod string, useLocalTimestamp
 }
 
 func processUncompressedStream(r io.Reader, useLocalTimestamp bool, remoteIP string, lmp insertutil.LogMessageProcessor) error {
-	wcr := writeconcurrencylimiter.GetReader(r)
-	defer writeconcurrencylimiter.PutReader(wcr)
-
-	slr := getSyslogLineReader(wcr)
+	slr := getSyslogLineReader(r)
 	defer putSyslogLineReader(slr)
 
 	n := 0
 	for {
 		ok := slr.nextLine()
-		wcr.DecConcurrency()
 		if !ok {
 			break
 		}

@@ -38,8 +38,15 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	wcr, err := writeconcurrencylimiter.GetReader(r.Body)
+	if err != nil {
+		logger.Errorf("cannot start reading jsonline request: %s", err)
+		return
+	}
+	defer writeconcurrencylimiter.PutReader(wcr)
+
 	encoding := r.Header.Get("Content-Encoding")
-	reader, err := protoparserutil.GetUncompressedReader(r.Body, encoding)
+	reader, err := protoparserutil.GetUncompressedReader(wcr, encoding)
 	if err != nil {
 		logger.Errorf("cannot decode jsonline request: %s", err)
 		return
@@ -59,17 +66,13 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func processStreamInternal(streamName string, r io.Reader, timeFields, msgFields []string, lmp insertutil.LogMessageProcessor) error {
-	wcr := writeconcurrencylimiter.GetReader(r)
-	defer writeconcurrencylimiter.PutReader(wcr)
-
-	lr := insertutil.NewLineReader(streamName, wcr)
+	lr := insertutil.NewLineReader(streamName, r)
 
 	n := 0
 	errors := 0
 	var lastError error
 	for {
 		ok, err := readLine(lr, timeFields, msgFields, lmp)
-		wcr.DecConcurrency()
 		if err != nil {
 			lastError = err
 			errors++
