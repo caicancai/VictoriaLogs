@@ -142,10 +142,10 @@ func (pm *patternMatcher) Match(s string) bool {
 		_, end := pm.indexStartEnd(s, 0)
 		return end >= 0
 	case patternMatcherOptionFull:
-		end := pm.indexEndAtOffset(s, 0)
+		end := pm.indexEnd(s, 0)
 		return end == len(s)
 	case patternMatcherOptionPrefix:
-		end := pm.indexEndAtOffset(s, 0)
+		end := pm.indexEnd(s, 0)
 		return end >= 0
 	case patternMatcherOptionSuffix:
 		if pm.isEmpty() {
@@ -181,11 +181,11 @@ func (pm *patternMatcher) isEmpty() bool {
 
 func (pm *patternMatcher) indexStartEnd(s string, offset int) (int, int) {
 	for {
-		start := pm.indexStartAtOffset(s, offset)
+		start := pm.indexStart(s, offset)
 		if start < 0 {
 			return -1, -1
 		}
-		end := pm.indexEndAtOffset(s, start)
+		end := pm.indexEnd(s, start)
 		if end >= 0 {
 			return start, end
 		}
@@ -193,7 +193,7 @@ func (pm *patternMatcher) indexStartEnd(s string, offset int) (int, int) {
 	}
 }
 
-func (pm *patternMatcher) indexStartAtOffset(s string, offset int) int {
+func (pm *patternMatcher) indexStart(s string, offset int) int {
 	if firstSep := pm.separators[0]; firstSep != "" {
 		n := strings.Index(s[offset:], firstSep)
 		if n < 0 {
@@ -213,10 +213,9 @@ func (pm *patternMatcher) indexStartAtOffset(s string, offset int) int {
 	return indexNumStart(s, offset)
 }
 
-func (pm *patternMatcher) indexEndAtOffset(s string, start int) int {
+func (pm *patternMatcher) indexEnd(s string, offset int) int {
 	placeholders := pm.placeholders
 
-	offset := start
 	for i, sep := range pm.separators {
 		if sep != "" {
 			if !strings.HasPrefix(s[offset:], sep) {
@@ -229,7 +228,7 @@ func (pm *patternMatcher) indexEndAtOffset(s string, start int) int {
 			return offset
 		}
 
-		offset = placeholders[i].indexEndAtOffset(s, offset)
+		offset = placeholders[i].indexEnd(s, offset)
 		if offset < 0 {
 			return -1
 		}
@@ -237,22 +236,22 @@ func (pm *patternMatcher) indexEndAtOffset(s string, start int) int {
 	return offset
 }
 
-func (ph patternMatcherPlaceholder) indexEndAtOffset(s string, start int) int {
+func (ph patternMatcherPlaceholder) indexEnd(s string, offset int) int {
 	switch ph {
 	case patternMatcherPlaceholderNum:
-		return indexPlaceholderNumEnd(s, start)
+		return indexPlaceholderNumEnd(s, offset)
 	case patternMatcherPlaceholderUUID:
-		return indexPlaceholderUUIDEnd(s, start)
+		return indexPlaceholderUUIDEnd(s, offset)
 	case patternMatcherPlaceholderIP4:
-		return indexPlaceholderIP4End(s, start)
+		return indexPlaceholderIP4End(s, offset)
 	case patternMatcherPlaceholderTime:
-		return indexPlaceholderTimeEnd(s, start)
+		return indexPlaceholderTimeEnd(s, offset)
 	case patternMatcherPlaceholderDate:
-		return indexPlaceholderDateEnd(s, start)
+		return indexPlaceholderDateEnd(s, offset)
 	case patternMatcherPlaceholderDateTime:
-		return indexPlaceholderDateTimeEnd(s, start)
+		return indexPlaceholderDateTimeEnd(s, offset)
 	case patternMatcherPlaceholderWord:
-		return indexPlaceholderWordEnd(s, start)
+		return indexPlaceholderWordEnd(s, offset)
 	default:
 		logger.Panicf("BUG: unexpected patternMatcherPlaceholder=%d", ph)
 		return -1
