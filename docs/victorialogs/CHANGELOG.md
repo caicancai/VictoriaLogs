@@ -22,6 +22,8 @@ according to the following docs:
 
 ## tip
 
+* FEATURE: [LogsQL](https://docs.victoriametrics.com/victorialogs/logsql/): add [`array_contains` filter](https://docs.victoriametrics.com/victorialogs/logsql/#array_contains-filter) for matching fields containing JSON arrays by the presence of the given value in the array. This is useful for JSON-encoded logs containing fields such as `tags=["prod","canary"]`.
+
 ## [v1.45.0](https://github.com/VictoriaMetrics/VictoriaLogs/releases/tag/v1.45.0)
 
 Released at 2026-02-05
