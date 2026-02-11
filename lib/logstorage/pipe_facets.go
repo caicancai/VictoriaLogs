@@ -68,7 +68,8 @@ func (pf *pipeFacets) splitToRemoteAndLocal(timestamp int64) (pipe, []pipe) {
 		| filter field_values_count:<=%d
 		| delete field_values_count
 		| sort by (hits desc) limit %d partition by (field_name)
-		| sort by (field_name, hits desc)`, pf.maxValuesPerField, pf.limit)
+		| sort by (field_name, hits desc, field_value)
+		| fields field_name, field_value, hits`, pf.maxValuesPerField, pf.limit)
 	psLocal := mustParsePipes(psLocalStr, timestamp)
 
 	return &pRemote, psLocal
