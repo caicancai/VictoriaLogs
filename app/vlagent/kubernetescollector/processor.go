@@ -38,13 +38,13 @@ var (
 		"See: https://docs.victoriametrics.com/victorialogs/keyconcepts/#stream-fields")
 
 	includePodLabels = flag.Bool("kubernetesCollector.includePodLabels", true, "Include Pod labels as additional fields in the log entries. "+
-		"Even this setting is disabled, Pod labels are available for filtering via -kubernetes.excludeFilter flag")
+		"Even this setting is disabled, Pod labels are available for filtering via -kubernetesCollector.excludeFilter flag")
 	includePodAnnotations = flag.Bool("kubernetesCollector.includePodAnnotations", false, "Include Pod annotations as additional fields in the log entries. "+
-		"Even this setting is disabled, Pod annotations are available for filtering via -kubernetes.excludeFilter flag")
+		"Even this setting is disabled, Pod annotations are available for filtering via -kubernetesCollector.excludeFilter flag")
 	includeNodeLabels = flag.Bool("kubernetesCollector.includeNodeLabels", false, "Include Node labels as additional fields in the log entries. "+
-		"Even this setting is disabled, Node labels are available for filtering via -kubernetes.excludeFilter flag")
+		"Even this setting is disabled, Node labels are available for filtering via -kubernetesCollector.excludeFilter flag")
 	includeNodeAnnotations = flag.Bool("kubernetesCollector.includeNodeAnnotations", false, "Include Node annotations as additional fields in the log entries. "+
-		"Even this setting is disabled, Node annotations are available for filtering via -kubernetes.excludeFilter flag")
+		"Even this setting is disabled, Node annotations are available for filtering via -kubernetesCollector.excludeFilter flag")
 )
 
 type logFileProcessor struct {
@@ -97,9 +97,9 @@ func newLogFileProcessor(storage insertutil.LogRowsStorage, commonFields []logst
 	}
 }
 
-func (lfp *logFileProcessor) tryAddLine(logLine []byte) bool {
+func (lfp *logFileProcessor) tryAddLine(logLine []byte) (bool, error) {
 	if len(logLine) == 0 {
-		return true
+		return true, nil
 	}
 
 	if logLine[0] == '{' {
@@ -110,28 +110,28 @@ func (lfp *logFileProcessor) tryAddLine(logLine []byte) bool {
 
 		criLine, err := parseCRILineJSON(parser, logLine)
 		if err != nil {
-			logger.Panicf("FATAL: cannot parse 'json-file' log content: %s; content: %q", err, logLine)
+			return false, fmt.Errorf("cannot parse 'json-file' logging driver content %q: %w", logLine, err)
 		}
 
 		lfp.addLineInternal(criLine.timestamp, criLine.content)
 
-		return true
+		return true, nil
 	}
 
 	criLine, err := parseCRILine(logLine)
 	if err != nil {
-		logger.Panicf("FATAL: cannot parse Container Runtime Interface log line: %s; content: %q", err, logLine)
+		return false, fmt.Errorf("cannot parse CRI line content %q: %w", logLine, err)
 	}
 
 	timestamp, content, ok := lfp.joinPartialLines(criLine)
 	if !ok {
 		// The log content is not yet complete.
-		return false
+		return false, nil
 	}
 	if len(content) == 0 {
 		// The log content is truncated or empty.
 		// Skip such lines.
-		return true
+		return true, nil
 	}
 
 	lfp.addLineInternal(timestamp, content)
@@ -141,7 +141,7 @@ func (lfp *logFileProcessor) tryAddLine(logLine []byte) bool {
 		lfp.partialCRIContent = nil
 	}
 
-	return true
+	return true, nil
 }
 
 func (lfp *logFileProcessor) joinPartialLines(criLine criLine) (int64, []byte, bool) {

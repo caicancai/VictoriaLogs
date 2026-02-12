@@ -45,6 +45,10 @@ func (pu *pipeUnroll) canReturnLastNResults() bool {
 	return true
 }
 
+func (pu *pipeUnroll) isFixedOutputFieldsOrder() bool {
+	return false
+}
+
 func (pu *pipeUnroll) hasFilterInWithQuery() bool {
 	return pu.iff.hasFilterInWithQuery()
 }

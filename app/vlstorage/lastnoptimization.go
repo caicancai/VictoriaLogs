@@ -32,7 +32,7 @@ func runOptimizedLastNResultsQuery(qctx *logstorage.QueryContext, offset, limit 
 			columns[j].Name = f.Name
 			columns[j].Values = values[j : j+1]
 		}
-		db.Columns = columns
+		db.SetColumns(columns)
 		writeBlock(0, &db)
 	}
 	return nil
@@ -164,8 +164,11 @@ func getLogRowsFromDataBlock(db *logstorage.DataBlock) ([]logRow, error) {
 		return nil, fmt.Errorf("missing _time field in the query results")
 	}
 
-	columnNames := make([]string, len(db.Columns))
-	for i, c := range db.Columns {
+	// There is no need to sort columns here, since they will be sorted by the caller.
+	columns := db.GetColumns(false)
+
+	columnNames := make([]string, len(columns))
+	for i, c := range columns {
 		columnNames[i] = strings.Clone(c.Name)
 	}
 
@@ -174,7 +177,7 @@ func getLogRowsFromDataBlock(db *logstorage.DataBlock) ([]logRow, error) {
 
 	for i, timestamp := range timestamps {
 		fieldsBufLen := len(fieldsBuf)
-		for j, c := range db.Columns {
+		for j, c := range columns {
 			fieldsBuf = append(fieldsBuf, logstorage.Field{
 				Name:  columnNames[j],
 				Value: strings.Clone(c.Values[i]),

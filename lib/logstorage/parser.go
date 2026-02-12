@@ -760,6 +760,22 @@ func (q *Query) GetFilterTimeRange() (int64, int64) {
 	return getFilterTimeRange(q.f)
 }
 
+// IsFixedOutputFieldsOrder returns true if the query results have fixed order of fields.
+func (q *Query) IsFixedOutputFieldsOrder() bool {
+	pipes := q.pipes
+	for i := len(pipes) - 1; i >= 0; i-- {
+		p := pipes[i]
+		if p.isFixedOutputFieldsOrder() {
+			return true
+		}
+		if pu, ok := p.(*pipeUnion); ok && !pu.q.IsFixedOutputFieldsOrder() {
+			return false
+		}
+	}
+
+	return false
+}
+
 func getFilterTimeRange(f filter) (int64, int64) {
 	switch t := f.(type) {
 	case *filterAnd:

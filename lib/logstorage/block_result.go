@@ -233,8 +233,9 @@ func (br *blockResult) initFromDataBlock(db *DataBlock) {
 
 	br.rowsLen = db.RowsCount()
 
-	for i := range db.Columns {
-		c := &db.Columns[i]
+	columns := db.columns
+	for i := range columns {
+		c := &columns[i]
 		if c.Name == "_time" {
 			var ok bool
 			br.timestampsBuf, ok = tryParseTimestamps(br.timestampsBuf[:0], c.Values)
@@ -1868,14 +1869,35 @@ func (br *blockResult) deleteColumnsByFilters(columnFilters []string) {
 
 // setColumnFilters sets the resulting columns according to the given columnFilters.
 func (br *blockResult) setColumnFilters(columnFilters []string) {
-	if br.areSameColumns(columnFilters) {
+	cs := br.getColumns()
+
+	if !hasWildcardFilters(columnFilters) {
+		if areSameColumns(cs, columnFilters) {
+			// Fast path - nothing to change.
+			return
+		}
+
+		// Slow path - construct the requested columns in the requested order.
+		br.csInitialized = false
+		csBufLen := len(br.csBuf)
+		for _, field := range columnFilters {
+			idx := getBlockResultColumnIdxByName(cs, field)
+			if idx >= 0 {
+				br.csBuf = append(br.csBuf, *cs[idx])
+			} else {
+				br.addConstColumn(field, "")
+			}
+		}
+		br.csBuf = append(br.csBuf[:0], br.csBuf[csBufLen:]...)
+		return
+	}
+
+	if areSameWildcardColumns(cs, columnFilters) {
 		// Fast path - nothing to change.
 		return
 	}
 
 	// Slow path - construct the requested columns
-	cs := br.getColumns()
-
 	br.csInitialized = false
 	csBuf := br.csBuf
 	csBufLen := len(csBuf)
@@ -1899,8 +1921,19 @@ func (br *blockResult) setColumnFilters(columnFilters []string) {
 	}
 }
 
-func (br *blockResult) areSameColumns(columnFilters []string) bool {
-	cs := br.getColumns()
+func areSameColumns(cs []*blockResultColumn, columnFilters []string) bool {
+	if len(cs) != len(columnFilters) {
+		return false
+	}
+	for i, c := range cs {
+		if columnFilters[i] != c.name {
+			return false
+		}
+	}
+	return true
+}
+
+func areSameWildcardColumns(cs []*blockResultColumn, columnFilters []string) bool {
 	for _, c := range cs {
 		if !prefixfilter.MatchFilters(columnFilters, c.name) {
 			return false
@@ -1915,8 +1948,16 @@ func (br *blockResult) areSameColumns(columnFilters []string) bool {
 			return false
 		}
 	}
-
 	return true
+}
+
+func hasWildcardFilters(columnFilters []string) bool {
+	for _, f := range columnFilters {
+		if prefixfilter.IsWildcardFilter(f) {
+			return true
+		}
+	}
+	return false
 }
 
 func getMatchingColumns(br *blockResult, filters []string) *matchingColumns {

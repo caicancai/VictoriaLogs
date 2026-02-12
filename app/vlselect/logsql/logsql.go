@@ -18,6 +18,7 @@ import (
 
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/atomicutil"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/bytesutil"
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/encoding"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/flagutil"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/httpserver"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/httputil"
@@ -149,24 +150,16 @@ func ProcessFacetsRequest(ctx context.Context, w http.ResponseWriter, r *http.Re
 			return
 		}
 
-		columns := db.Columns
+		columns := db.GetColumns(false)
 		if len(columns) != 3 {
 			logger.Panicf("BUG: expecting 3 columns; got %d columns", len(columns))
 		}
 
 		// Fetch columns by name to avoid relying on column ordering at VictoriaLogs cluster.
 		// See https://github.com/VictoriaMetrics/VictoriaLogs/issues/648
-		cFieldName := db.GetColumnByName("field_name")
-		cFieldValue := db.GetColumnByName("field_value")
-		cHits := db.GetColumnByName("hits")
-		if cFieldName == nil || cFieldValue == nil || cHits == nil {
-			logger.Panicf("BUG: missing expected columns for facets response: field_name=%v, field_value=%v, hits=%v",
-				cFieldName != nil, cFieldValue != nil, cHits != nil)
-		}
-
-		fieldNames := cFieldName.Values
-		fieldValues := cFieldValue.Values
-		hits := cHits.Values
+		fieldNames := columns[0].Values
+		fieldValues := columns[1].Values
+		hits := columns[2].Values
 
 		bb := blockResultPool.Get()
 		for i := range fieldNames {
@@ -258,7 +251,7 @@ func ProcessHitsRequest(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		columns := db.Columns
+		columns := db.GetColumns(false)
 		timestampValues := columns[0].Values
 		hitsValues := columns[len(columns)-1].Values
 		columns = columns[1 : len(columns)-1]
@@ -686,7 +679,8 @@ func ProcessLiveTailRequest(ctx context.Context, w http.ResponseWriter, r *http.
 	}
 
 	ctxWithCancel, cancel := context.WithCancel(ctx)
-	tp := newTailProcessor(cancel)
+	needSortFields := !ca.q.IsFixedOutputFieldsOrder()
+	tp := newTailProcessor(cancel, needSortFields)
 
 	ticker := time.NewTicker(time.Duration(refreshInterval))
 	defer ticker.Stop()
@@ -755,15 +749,19 @@ type tailProcessor struct {
 
 	mu sync.Mutex
 
+	needSortFields bool
+
 	perStreamRows  map[string][]logRow
 	lastTimestamps map[string]int64
 
 	err error
 }
 
-func newTailProcessor(cancel func()) *tailProcessor {
+func newTailProcessor(cancel func(), needSortFields bool) *tailProcessor {
 	return &tailProcessor{
 		cancel: cancel,
+
+		needSortFields: needSortFields,
 
 		perStreamRows:  make(map[string][]logRow),
 		lastTimestamps: make(map[string]int64),
@@ -791,10 +789,11 @@ func (tp *tailProcessor) writeBlock(_ uint, db *logstorage.DataBlock) {
 	}
 
 	// Copy block rows to tp.perStreamRows
+	columns := db.GetColumns(tp.needSortFields)
 	for i, timestamp := range timestamps {
 		streamID := ""
-		fields := make([]logstorage.Field, len(db.Columns))
-		for j, c := range db.Columns {
+		fields := make([]logstorage.Field, len(columns))
+		for j, c := range columns {
 			name := strings.Clone(c.Name)
 			value := strings.Clone(c.Values[i])
 
@@ -886,8 +885,9 @@ func ProcessStatsQueryRangeRequest(ctx context.Context, w http.ResponseWriter, r
 	m := make(map[string]*statsSeries)
 	var mLock sync.Mutex
 
-	addPoint := func(name string, labels []logstorage.Field, p statsPoint) {
-		dst := append([]byte{}, name...)
+	addPoint := func(name string, columnIdx int, labels []logstorage.Field, p statsPoint) {
+		dst := encoding.MarshalUint32(nil, uint32(columnIdx))
+		dst = append(dst, name...)
 		dst = logstorage.MarshalFieldsToJSON(dst, labels)
 		key := string(dst)
 
@@ -908,7 +908,7 @@ func ProcessStatsQueryRangeRequest(ctx context.Context, w http.ResponseWriter, r
 	writeBlock := func(_ uint, db *logstorage.DataBlock) {
 		rowsCount := db.RowsCount()
 
-		columns := db.Columns
+		columns := db.GetColumns(false)
 		clonedColumnNames := make([]string, len(columns))
 		for i, c := range columns {
 			clonedColumnNames[i] = strings.Clone(c.Name)
@@ -935,6 +935,7 @@ func ProcessStatsQueryRangeRequest(ctx context.Context, w http.ResponseWriter, r
 				}
 			}
 
+			columnIdx := 0
 			for j, c := range columns {
 				if slices.Contains(labelFields, c.Name) {
 					continue
@@ -959,8 +960,9 @@ func ProcessStatsQueryRangeRequest(ctx context.Context, w http.ResponseWriter, r
 								Timestamp: ts,
 								Value:     strconv.FormatUint(bucket.Hits, 10),
 							}
-							addPoint(name, bucketLabels, p)
+							addPoint(name, columnIdx, bucketLabels, p)
 						}
+						columnIdx++
 
 						continue
 					}
@@ -970,7 +972,8 @@ func ProcessStatsQueryRangeRequest(ctx context.Context, w http.ResponseWriter, r
 					Timestamp: ts,
 					Value:     v,
 				}
-				addPoint(clonedColumnNames[j], labels, p)
+				addPoint(clonedColumnNames[j], columnIdx, labels, p)
+				columnIdx++
 			}
 		}
 	}
@@ -1044,7 +1047,8 @@ func ProcessStatsQueryRequest(ctx context.Context, w http.ResponseWriter, r *htt
 	timestamp := ca.q.GetTimestamp()
 	writeBlock := func(_ uint, db *logstorage.DataBlock) {
 		rowsCount := db.RowsCount()
-		columns := db.Columns
+
+		columns := db.GetColumns(false)
 		clonedColumnNames := make([]string, len(columns))
 		for i, c := range columns {
 			clonedColumnNames[i] = strings.Clone(c.Name)
@@ -1200,13 +1204,15 @@ func ProcessQueryRequest(ctx context.Context, w http.ResponseWriter, r *http.Req
 		ca.writeResponseHeaders(h, startTime)
 	})
 
+	needSortFields := !ca.q.IsFixedOutputFieldsOrder()
 	writeBlock := func(workerID uint, db *logstorage.DataBlock) {
 		writeResponseHeadersOnce()
 		rowsCount := db.RowsCount()
 		if rowsCount == 0 {
 			return
 		}
-		columns := db.Columns
+
+		columns := db.GetColumns(needSortFields)
 
 		bw := bwShards.Get(workerID)
 		for i := 0; i < rowsCount; i++ {

@@ -69,6 +69,10 @@ func (pc *pipeStreamContext) canReturnLastNResults() bool {
 	return false
 }
 
+func (ps *pipeStreamContext) isFixedOutputFieldsOrder() bool {
+	return false
+}
+
 func (pc *pipeStreamContext) withRunQuery(qctx *QueryContext, runQuery runQueryFunc, fieldsFilter *prefixfilter.Filter) pipe {
 	pcNew := *pc
 	pcNew.qctx = qctx

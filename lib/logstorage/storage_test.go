@@ -301,7 +301,8 @@ func checkQueryResults(t *testing.T, s *Storage, tenantIDs []TenantID, qStr stri
 	callback := func(_ uint, db *DataBlock) {
 		rows := make([][]Field, db.RowsCount())
 
-		for _, c := range db.Columns {
+		columns := db.GetColumns(false)
+		for _, c := range columns {
 			for rowID, v := range c.Values {
 				rows[rowID] = append(rows[rowID], Field{
 					Name:  c.Name,

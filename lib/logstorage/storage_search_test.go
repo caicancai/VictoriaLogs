@@ -132,7 +132,8 @@ func TestStorageRunQuery(t *testing.T) {
 			writeBlock := func(_ uint, db *DataBlock) {
 				hasTenantIDColumn := false
 				var columnNames []string
-				for _, c := range db.Columns {
+				columns := db.GetColumns(false)
+				for _, c := range columns {
 					if c.Name == "tenant.id" {
 						hasTenantIDColumn = true
 						if len(c.Values) != db.RowsCount() {
@@ -205,7 +206,8 @@ func TestStorageRunQuery(t *testing.T) {
 			writeBlock := func(_ uint, db *DataBlock) {
 				hasStreamIDColumn := false
 				var columnNames []string
-				for _, c := range db.Columns {
+				columns := db.GetColumns(false)
+				for _, c := range columns {
 					if c.Name == "stream-id" {
 						hasStreamIDColumn = true
 						if len(c.Values) != db.RowsCount() {
@@ -330,13 +332,15 @@ func TestStorageRunQuery(t *testing.T) {
 		m := make(map[int64]string)
 		writeBlock := func(_ uint, db *DataBlock) {
 			rowsCount := db.RowsCount()
+			columns := db.GetColumns(false)
+			if len(columns) != 2 {
+				panic(fmt.Errorf("unexpected number of columns; got %d; want 4", len(columns)))
+			}
+
 			for i := 0; i < rowsCount; i++ {
-				if len(db.Columns) != 2 {
-					panic(fmt.Errorf("unexpected number of columns; got %d; want 4", len(db.Columns)))
-				}
 				timestamp := int64(0)
 				hits := ""
-				for _, c := range db.Columns {
+				for _, c := range columns {
 					v := c.Values[i]
 					switch c.Name {
 					case "_time":
@@ -629,13 +633,14 @@ func TestStorageRunQuery(t *testing.T) {
 		var resultRowsLock sync.Mutex
 		var resultRows [][]Field
 		writeBlock := func(_ uint, db *DataBlock) {
-			if len(db.Columns) == 0 {
+			columns := db.GetColumns(false)
+			if len(columns) == 0 {
 				return
 			}
 
-			for i := 0; i < len(db.Columns[0].Values); i++ {
-				row := make([]Field, len(db.Columns))
-				for j, bc := range db.Columns {
+			for i := 0; i < len(columns[0].Values); i++ {
+				row := make([]Field, len(columns))
+				for j, bc := range columns {
 					row[j] = Field{
 						Name:  strings.Clone(bc.Name),
 						Value: strings.Clone(bc.Values[i]),
@@ -1368,8 +1373,8 @@ func TestDataBlock_MarshalUnmarshal(t *testing.T) {
 			t.Fatalf("unexpected non-empty tail returned; len(tail)=%d", len(tail))
 		}
 
-		if len(db2.Columns) == 0 {
-			db2.Columns = nil
+		if len(db2.columns) == 0 {
+			db2.columns = nil
 		}
 		if !reflect.DeepEqual(db, db2) {
 			t.Fatalf("unexpected DataBlock after unmarshaling\ngot\n%#v\nwant\n%#v", db2, db)
@@ -1384,7 +1389,7 @@ func TestDataBlock_MarshalUnmarshal(t *testing.T) {
 
 	// Zero rows, non-zero columns
 	db = &DataBlock{
-		Columns: []BlockColumn{
+		columns: []BlockColumn{
 			{
 				Name: "foo",
 			},
@@ -1397,7 +1402,7 @@ func TestDataBlock_MarshalUnmarshal(t *testing.T) {
 
 	// Non-zero rows, non-zero columns
 	db = &DataBlock{
-		Columns: []BlockColumn{
+		columns: []BlockColumn{
 			{
 				Name:   "foo",
 				Values: []string{"a", "b", "c"},
@@ -1412,7 +1417,7 @@ func TestDataBlock_MarshalUnmarshal(t *testing.T) {
 
 	// Const columns
 	db = &DataBlock{
-		Columns: []BlockColumn{
+		columns: []BlockColumn{
 			{
 				Name:   "foo",
 				Values: []string{"a", "a", "a"},
@@ -1427,7 +1432,7 @@ func TestDataBlock_MarshalUnmarshal(t *testing.T) {
 
 	// Timestamp column
 	db = &DataBlock{
-		Columns: []BlockColumn{
+		columns: []BlockColumn{
 			{
 				Name:   "_time",
 				Values: []string{"2025-01-20T10:20:30Z", "2025-01-20T10:20:30.124Z", "2025-01-20T10:20:30.123456789Z"},
@@ -1438,7 +1443,7 @@ func TestDataBlock_MarshalUnmarshal(t *testing.T) {
 
 	// Non-zero columns, plus timestamps column
 	db = &DataBlock{
-		Columns: []BlockColumn{
+		columns: []BlockColumn{
 			{
 				Name:   "foo",
 				Values: []string{"a", "a", "a"},

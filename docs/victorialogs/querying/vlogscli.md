@@ -139,7 +139,9 @@ See also [other available shortcuts](https://github.com/chzyer/readline/blob/f53
 ## Output modes
 
 By default `vlogscli` displays query results as prettified JSON object with every field on a separate line.
-Fields in every JSON object are sorted in alphabetical order. This simplifies locating the needed fields.
+Fields in every JSON object are sorted in alphabetical order unless the query ends with [pipes](https://docs.victoriametrics.com/victorialogs/logsql/#pipes),
+which specify the order of returned fields, such as [`fields`](https://docs.victoriametrics.com/victorialogs/logsql/#fields-pipe)
+or [`stats`](https://docs.victoriametrics.com/victorialogs/logsql/#stats-pipe) pipes. This simplifies locating the needed fields.
 
 `vlogscli` supports the following output modes:
 

@@ -3793,15 +3793,15 @@ func TestQueryGetStatsLabelsAddGroupingByTime_Success(t *testing.T) {
 	f(`* | count()`, nsecsPerHour, 0, []string{"_time"}, `* | stats by (_time:3600000000000) count(*) as "count(*)"`)
 	f(`* | count() x`, nsecsPerHour, 10*nsecsPerMinute, []string{"_time"}, `* | stats by (_time:3600000000000 offset 600000000000) count(*) as x`)
 	f(`* | count() x`, nsecsPerHour, -nsecsPerDay, []string{"_time"}, `* | stats by (_time:3600000000000 offset -86400000000000) count(*) as x`)
-	f(`* | by (level) count() x`, nsecsPerDay, 0, []string{"level", "_time"}, `* | stats by (level, _time:86400000000000) count(*) as x`)
+	f(`* | by (level) count() x`, nsecsPerDay, 0, []string{"_time", "level"}, `* | stats by (_time:86400000000000, level) count(*) as x`)
 	f(`* | by (_time:1m) count() x`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (_time:86400000000000) count(*) as x`)
 	f(`* | by (_time:1m offset 30s,level) count() x, count_uniq(z) y`, nsecsPerDay, 0, []string{"_time", "level"}, `* | stats by (_time:86400000000000, level) count(*) as x, count_uniq(z) as y`)
 
 	// Verify allowed pipes after the stats pipe
 	f(`* | count() hits | x:y`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (_time:86400000000000) count(*) as hits | filter x:y`)
-	f(`* | by (path) rate() rps | first 3 by (rps)`, nsecsPerDay, 0, []string{"path", "_time"}, `* | stats by (path, _time:86400000000000) rate() as rps | first 3 by (rps) partition by (_time)`)
-	f(`* | by (path) rate() rps | last 3 by (rps)`, nsecsPerDay, 0, []string{"path", "_time"}, `* | stats by (path, _time:86400000000000) rate() as rps | last 3 by (rps) partition by (_time)`)
-	f(`* | by (path) rate() rps | sort (rps) limit 3`, nsecsPerDay, 0, []string{"path", "_time"}, `* | stats by (path, _time:86400000000000) rate() as rps | sort by (rps) partition by (_time) limit 3`)
+	f(`* | by (path) rate() rps | first 3 by (rps)`, nsecsPerDay, 0, []string{"_time", "path"}, `* | stats by (_time:86400000000000, path) rate() as rps | first 3 by (rps) partition by (_time)`)
+	f(`* | by (path) rate() rps | last 3 by (rps)`, nsecsPerDay, 0, []string{"_time", "path"}, `* | stats by (_time:86400000000000, path) rate() as rps | last 3 by (rps) partition by (_time)`)
+	f(`* | by (path) rate() rps | sort (rps) limit 3`, nsecsPerDay, 0, []string{"_time", "path"}, `* | stats by (_time:86400000000000, path) rate() as rps | sort by (rps) partition by (_time) limit 3`)
 	f(`* | count() hits | running_stats sum(hits) running_hits`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (_time:86400000000000) count(*) as hits | running_stats sum(hits) as running_hits`)
 	f(`* | count() hits | running_stats sum(hits) running_hits | rm hits`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (_time:86400000000000) count(*) as hits | running_stats sum(hits) as running_hits | delete hits`)
 	f(`* | count() hits | total_stats sum(hits) running_hits`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (_time:86400000000000) count(*) as hits | total_stats sum(hits) as running_hits`)
@@ -3816,7 +3816,7 @@ func TestQueryGetStatsLabelsAddGroupingByTime_Success(t *testing.T) {
 	f(`* | count() hits, row_any(_msg) msg_sample | unpack_json from msg_sample fields (_msg) | rm msg_sample`, nsecsPerDay, 0, []string{"_time", "_msg"}, `* | stats by (_time:86400000000000) count(*) as hits, row_any(_msg) as msg_sample | unpack_json from msg_sample fields (_msg) | delete msg_sample`)
 
 	// multiple stats pipes and sort pipes
-	f(`* | by (path) count() requests | by (requests) count() hits | first (hits desc)`, nsecsPerDay, 0, []string{"requests", "_time"}, `* | stats by (path, _time:86400000000000) count(*) as requests | stats by (requests, _time:86400000000000) count(*) as hits | first by (hits desc) partition by (_time)`)
+	f(`* | by (path) count() requests | by (requests) count() hits | first (hits desc)`, nsecsPerDay, 0, []string{"_time", "requests"}, `* | stats by (_time:86400000000000, path) count(*) as requests | stats by (_time:86400000000000, requests) count(*) as hits | first by (hits desc) partition by (_time)`)
 
 	// pipes, which do not drop or modify _time, are allowed in front of `stats` pipe
 	f("* | collapse_nums | count() x", nsecsPerDay, 0, []string{"_time"}, `* | collapse_nums | stats by (_time:86400000000000) count(*) as x`)
@@ -3849,27 +3849,27 @@ func TestQueryGetStatsLabelsAddGroupingByTime_Success(t *testing.T) {
 	// Unusual cases, which override the original stats labels
 
 	f(`* | count() | running_stats sum(hits) _time`, nsecsPerDay, 0, []string{}, `* | stats by (_time:86400000000000) count(*) as "count(*)" | running_stats sum(hits) as _time`)
-	f(`* | by (x) count() | running_stats by (x) sum(hits) x`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (x, _time:86400000000000) count(*) as "count(*)" | running_stats by (x) sum(hits) as x`)
+	f(`* | by (x) count() | running_stats by (x) sum(hits) x`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (_time:86400000000000, x) count(*) as "count(*)" | running_stats by (x) sum(hits) as x`)
 
 	f(`* | count() | total_stats sum(hits) _time`, nsecsPerDay, 0, []string{}, `* | stats by (_time:86400000000000) count(*) as "count(*)" | total_stats sum(hits) as _time`)
-	f(`* | by (x) count() | total_stats by (x) sum(hits) x`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (x, _time:86400000000000) count(*) as "count(*)" | total_stats by (x) sum(hits) as x`)
+	f(`* | by (x) count() | total_stats by (x) sum(hits) x`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (_time:86400000000000, x) count(*) as "count(*)" | total_stats by (x) sum(hits) as x`)
 
 	f(`* | count() | math a+b _time`, nsecsPerDay, 0, []string{}, `* | stats by (_time:86400000000000) count(*) as "count(*)" | math (a + b) as _time`)
-	f(`* | by (x) count() | math a+b x`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (x, _time:86400000000000) count(*) as "count(*)" | math (a + b) as x`)
+	f(`* | by (x) count() | math a+b x`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (_time:86400000000000, x) count(*) as "count(*)" | math (a + b) as x`)
 
 	f(`* | count() | rm _time`, nsecsPerDay, 0, []string{}, `* | stats by (_time:86400000000000) count(*) as "count(*)" | delete _time`)
-	f(`* | by (x) count() | rm x`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (x, _time:86400000000000) count(*) as "count(*)" | delete x`)
+	f(`* | by (x) count() | rm x`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (_time:86400000000000, x) count(*) as "count(*)" | delete x`)
 
 	f(`* | count() | cp a _time`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (_time:86400000000000) count(*) as "count(*)" | copy a as _time`)
-	f(`* | by (x) count() | cp a x`, nsecsPerDay, 0, []string{"x", "_time"}, `* | stats by (x, _time:86400000000000) count(*) as "count(*)" | copy a as x`)
+	f(`* | by (x) count() | cp a x`, nsecsPerDay, 0, []string{"_time", "x"}, `* | stats by (_time:86400000000000, x) count(*) as "count(*)" | copy a as x`)
 
 	f(`* | count() | mv a _time`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (_time:86400000000000) count(*) as "count(*)" | rename a as _time`)
-	f(`* | by (x) count() | mv a x`, nsecsPerDay, 0, []string{"x", "_time"}, `* | stats by (x, _time:86400000000000) count(*) as "count(*)" | rename a as x`)
+	f(`* | by (x) count() | mv a x`, nsecsPerDay, 0, []string{"_time", "x"}, `* | stats by (_time:86400000000000, x) count(*) as "count(*)" | rename a as x`)
 
 	f(`* | count() | format "a" as _time`, nsecsPerDay, 0, []string{"_time"}, `* | stats by (_time:86400000000000) count(*) as "count(*)" | format a as _time`)
-	f(`* | by (x) count() | format "a" as x`, nsecsPerDay, 0, []string{"x", "_time"}, `* | stats by (x, _time:86400000000000) count(*) as "count(*)" | format a as x`)
+	f(`* | by (x) count() | format "a" as x`, nsecsPerDay, 0, []string{"_time", "x"}, `* | stats by (_time:86400000000000, x) count(*) as "count(*)" | format a as x`)
 
-	f(`* | stats by (host) count() total | rename host as server | fields host, total`, nsecsPerDay, 0, []string{}, `* | stats by (host, _time:86400000000000) count(*) as total | rename host as server | fields host, total`)
+	f(`* | stats by (host) count() total | rename host as server | fields host, total`, nsecsPerDay, 0, []string{}, `* | stats by (_time:86400000000000, host) count(*) as total | rename host as server | fields host, total`)
 }
 
 func TestQueryGetStatsLabelsAddGroupingByTime_Failure(t *testing.T) {

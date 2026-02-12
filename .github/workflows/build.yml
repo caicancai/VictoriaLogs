@@ -39,8 +39,8 @@ jobs:
         id: go
         uses: actions/setup-go@v6
         with:
-          go-version: stable
           cache: false
+          go-version-file: 'go.mod'
 
       - name: Cache Go artifacts
         uses: actions/cache@v5
@@ -50,7 +50,7 @@ jobs:
             ~/go/bin
             ~/go/pkg/mod
           key: go-artifacts-${{ runner.os }}-crossbuild-${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum', 'Makefile', 'app/**/Makefile') }}
-          restore-keys: go-artifacts-${{ runner.os }}-crossbuild-
+          restore-keys: go-artifacts-${{ runner.os }}-crossbuild-${{ steps.go.outputs.go-version }}-
 
       - name: Run crossbuild
         run: make crossbuild

@@ -72,6 +72,10 @@ func (pu *pipeUnpackJSON) canReturnLastNResults() bool {
 	return true
 }
 
+func (pu *pipeUnpackJSON) isFixedOutputFieldsOrder() bool {
+	return false
+}
+
 func (pu *pipeUnpackJSON) updateNeededFields(pf *prefixfilter.Filter) {
 	updateNeededFieldsForUnpackPipe(pu.fromField, pu.resultPrefix, pu.fieldFilters, pu.keepOriginalFields, pu.skipEmptyResults, pu.iff, pf)
 }

@@ -32,6 +32,10 @@ func (pg *pipeGenerateSequence) canReturnLastNResults() bool {
 	return false
 }
 
+func (pg *pipeGenerateSequence) isFixedOutputFieldsOrder() bool {
+	return true
+}
+
 func (pg *pipeGenerateSequence) updateNeededFields(pf *prefixfilter.Filter) {
 	pf.Reset()
 }

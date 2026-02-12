@@ -41,6 +41,10 @@ func (ps *pipeSetStreamFields) canReturnLastNResults() bool {
 	return true
 }
 
+func (ps *pipeSetStreamFields) isFixedOutputFieldsOrder() bool {
+	return false
+}
+
 func (ps *pipeSetStreamFields) updateNeededFields(f *prefixfilter.Filter) {
 	if !f.MatchString("_stream") {
 		return

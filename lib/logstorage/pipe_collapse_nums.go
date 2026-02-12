@@ -49,6 +49,10 @@ func (pc *pipeCollapseNums) canReturnLastNResults() bool {
 	return true
 }
 
+func (pc *pipeCollapseNums) isFixedOutputFieldsOrder() bool {
+	return false
+}
+
 func (pc *pipeCollapseNums) updateNeededFields(pf *prefixfilter.Filter) {
 	updateNeededFieldsForUpdatePipe(pf, pc.field, pc.iff)
 }

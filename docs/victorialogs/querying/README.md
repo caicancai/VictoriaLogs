@@ -55,6 +55,14 @@ See [these docs](https://docs.victoriametrics.com/victorialogs/querying/#command
 The response by default contains all the [fields](https://docs.victoriametrics.com/victorialogs/keyconcepts/#data-model) for the selected logs.
 Use [`fields` pipe](https://docs.victoriametrics.com/victorialogs/logsql/#fields-pipe) for selecting only the needed fields.
 
+The log fields are returned in alphabetical order unless the query ends with [pipes](https://docs.victoriametrics.com/victorialogs/logsql/#pipes),
+which explicitly set the order of the returned fields, such as:
+
+- [`fields` pipe](https://docs.victoriametrics.com/victorialogs/logsql/#fields-pipe).
+  For example, `error | fields _time, level, _msg` returns `_time`, `level` and `_msg` fields in the specified order for logs with the `error` word in the `_msg` field.
+- [`stats` pipe](https://docs.victoriametrics.com/victorialogs/logsql/#stats-pipe).
+  For example, `error | stats by (host) count() as requests` returns `host` and `requests` fields in the specified order.
+
 The `query` argument can be passed either in the request url itself (aka HTTP GET request) or via request body
 with the `x-www-form-urlencoded` encoding (aka HTTP POST request). The HTTP POST is useful for sending long queries
 when they do not fit the maximum url length of the used clients and proxies.
@@ -177,6 +185,10 @@ The `<query>` must conform the following rules:
 
 - It is recommended to return [`_stream_id`](https://docs.victoriametrics.com/victorialogs/keyconcepts/#stream-fields) field for more accurate live tailing
   across multiple streams.
+
+The log fields are returned in alphabetical order unless the query ends with [pipes](https://docs.victoriametrics.com/victorialogs/logsql/#pipes),
+which explicitly set the order of the returned fields, such as [`fields`](https://docs.victoriametrics.com/victorialogs/logsql/#fields-pipe)
+or [`stats`](https://docs.victoriametrics.com/victorialogs/logsql/#stats-pipe).
 
 Live tailing supports returning historical logs, which were ingested into VictoriaLogs before the start of live tailing. Pass `start_offset=<d>` query
 arg to `/select/logsql/tail` where `<d>` is the duration for returning historical logs. For example, the following command returns historical logs

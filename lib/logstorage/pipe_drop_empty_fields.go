@@ -31,6 +31,10 @@ func (pd *pipeDropEmptyFields) canReturnLastNResults() bool {
 	return true
 }
 
+func (pd *pipeDropEmptyFields) isFixedOutputFieldsOrder() bool {
+	return false
+}
+
 func (pd *pipeDropEmptyFields) hasFilterInWithQuery() bool {
 	return false
 }

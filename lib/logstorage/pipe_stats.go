@@ -202,6 +202,10 @@ func (ps *pipeStats) canReturnLastNResults() bool {
 	return false
 }
 
+func (ps *pipeStats) isFixedOutputFieldsOrder() bool {
+	return true
+}
+
 func (ps *pipeStats) updateNeededFields(pf *prefixfilter.Filter) {
 	if ps.mode.needImportState() {
 		ps.updateNeededFieldsLocal(pf)
@@ -286,20 +290,13 @@ func (ps *pipeStats) addByTimeField(step, offset int64) {
 	}
 
 	dstFields := make([]*byStatsField, 0, len(ps.byFields)+1)
-	hasByTime := false
+	dstFields = append(dstFields, bf)
 	for _, f := range ps.byFields {
-		if f.name == "_time" {
-			if hasByTime {
-				continue
-			}
-			f = bf
-			hasByTime = true
+		if f.name != "_time" {
+			dstFields = append(dstFields, f)
 		}
-		dstFields = append(dstFields, f)
 	}
-	if !hasByTime {
-		dstFields = append(dstFields, bf)
-	}
+
 	ps.byFields = dstFields
 }
 

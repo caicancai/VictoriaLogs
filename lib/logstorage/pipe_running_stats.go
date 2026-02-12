@@ -98,6 +98,10 @@ func (ps *pipeRunningStats) canReturnLastNResults() bool {
 	return false
 }
 
+func (ps *pipeRunningStats) isFixedOutputFieldsOrder() bool {
+	return false
+}
+
 func (ps *pipeRunningStats) updateNeededFields(pf *prefixfilter.Filter) {
 	pfOrig := pf.Clone()
 

@@ -1,18 +1,18 @@
 module github.com/VictoriaMetrics/VictoriaLogs
 
-go 1.25.7
+go 1.26.0
 
-replace github.com/VictoriaMetrics/VictoriaMetrics => github.com/VictoriaMetrics/VictoriaMetrics v1.135.1-0.20260204143121-09d2ce36e86d
+replace github.com/VictoriaMetrics/VictoriaMetrics => github.com/VictoriaMetrics/VictoriaMetrics v1.135.1-0.20260211165242-3a3c2084d38f
 
 require (
-	github.com/VictoriaMetrics/VictoriaMetrics v1.134.0
+	github.com/VictoriaMetrics/VictoriaMetrics v1.135.0
 	github.com/VictoriaMetrics/easyproto v1.1.3
 	github.com/VictoriaMetrics/metrics v1.40.2
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/ergochat/readline v0.1.3
 	github.com/golang/snappy v1.0.0
 	github.com/google/go-cmp v0.7.0
-	github.com/klauspost/compress v1.18.3
+	github.com/klauspost/compress v1.18.4
 	github.com/mattn/go-isatty v0.0.20
 	github.com/valyala/fastjson v1.6.7
 	github.com/valyala/fastrand v1.1.0
@@ -21,12 +21,12 @@ require (
 )
 
 require (
-	github.com/VictoriaMetrics/metricsql v0.84.8 // indirect
+	github.com/VictoriaMetrics/metricsql v0.84.9 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/valyala/gozstd v1.24.0 // indirect
 	github.com/valyala/histogram v1.2.0 // indirect
-	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/oauth2 v0.35.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 )

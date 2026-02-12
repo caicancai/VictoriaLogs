@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"sort"
 	"strings"
 	"sync"
 
@@ -90,9 +89,6 @@ func (jp *jsonPrettifier) prettifyJSONLines() error {
 		if err != nil {
 			return err
 		}
-		sort.Slice(fields, func(i, j int) bool {
-			return fields[i].Name < fields[j].Name
-		})
 		if err := jp.formatter(jp.bw, fields); err != nil {
 			return err
 		}

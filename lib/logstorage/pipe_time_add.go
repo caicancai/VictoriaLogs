@@ -39,6 +39,10 @@ func (pa *pipeTimeAdd) canReturnLastNResults() bool {
 	return true
 }
 
+func (pa *pipeTimeAdd) isFixedOutputFieldsOrder() bool {
+	return false
+}
+
 func (pa *pipeTimeAdd) updateNeededFields(_ *prefixfilter.Filter) {
 	// do nothing
 }

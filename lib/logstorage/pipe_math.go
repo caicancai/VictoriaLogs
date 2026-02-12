@@ -86,6 +86,10 @@ func (pm *pipeMath) canReturnLastNResults() bool {
 	return true
 }
 
+func (pm *pipeMath) isFixedOutputFieldsOrder() bool {
+	return false
+}
+
 func (me *mathEntry) String() string {
 	s := me.expr.String()
 	if isMathBinaryOp(me.expr.op) {

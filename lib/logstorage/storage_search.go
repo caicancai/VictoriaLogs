@@ -1091,23 +1091,42 @@ type BlockColumn struct {
 
 // DataBlock is a single block of data
 type DataBlock struct {
-	// Columns represents columns in the data block.
-	Columns []BlockColumn
+	// columns represents columns in the data block.
+	columns []BlockColumn
 }
 
 // Reset resets db
 func (db *DataBlock) Reset() {
-	clear(db.Columns)
-	db.Columns = db.Columns[:0]
+	clear(db.columns)
+	db.columns = db.columns[:0]
 }
 
 // RowsCount returns the number of rows in db.
 func (db *DataBlock) RowsCount() int {
-	columns := db.Columns
+	columns := db.columns
 	if len(columns) > 0 {
 		return len(columns[0].Values)
 	}
 	return 0
+}
+
+// GetColumns returns columns from db.
+//
+// If needSortSolumns is set, then the returned columns are sorted in alphabetical order
+func (db *DataBlock) GetColumns(needSortColumns bool) []BlockColumn {
+	if needSortColumns {
+		sort.Slice(db.columns, func(i, j int) bool {
+			return db.columns[i].Name < db.columns[j].Name
+		})
+	}
+	return db.columns
+}
+
+// SetColumns sets columns to db.
+//
+// db owns columns after returning from the call.
+func (db *DataBlock) SetColumns(columns []BlockColumn) {
+	db.columns = columns
 }
 
 // GetTimestamps appends _time column values from db to dst and returns the result.
@@ -1125,7 +1144,7 @@ func (db *DataBlock) GetTimestamps(dst []int64) ([]int64, bool) {
 //
 // nil is returned if there is no such column.
 func (db *DataBlock) GetColumnByName(name string) *BlockColumn {
-	columns := db.Columns
+	columns := db.columns
 	for i := range columns {
 		c := &columns[i]
 		if c.Name == name {
@@ -1140,7 +1159,7 @@ func (db *DataBlock) Marshal(dst []byte) []byte {
 	rowsCount := db.RowsCount()
 	dst = encoding.MarshalVarUint64(dst, uint64(rowsCount))
 
-	columns := db.Columns
+	columns := db.columns
 	dst = encoding.MarshalVarUint64(dst, uint64(len(columns)))
 	for i := range columns {
 		c := &columns[i]
@@ -1173,7 +1192,7 @@ const (
 // UnmarshalInplace unmarshals db from src and returns the tail
 //
 // db is valid until src is changed.
-// valuesBuf holds all the values in the unmarshaled db.Columns.
+// valuesBuf holds all the values in the unmarshaled db.columns.
 func (db *DataBlock) UnmarshalInplace(src []byte, valuesBuf []string) ([]byte, []string, error) {
 	srcOrig := src
 
@@ -1201,7 +1220,7 @@ func (db *DataBlock) UnmarshalInplace(src []byte, valuesBuf []string) ([]byte, [
 	src = src[n:]
 
 	// Unmarshal columns
-	columns := slicesutil.SetLength(db.Columns, int(columnsLen))
+	columns := slicesutil.SetLength(db.columns, int(columnsLen))
 	for i := range columns {
 		name, n := encoding.UnmarshalBytes(src)
 		if n <= 0 {
@@ -1250,7 +1269,7 @@ func (db *DataBlock) UnmarshalInplace(src []byte, valuesBuf []string) ([]byte, [
 			Values: valuesBufA,
 		}
 	}
-	db.Columns = columns
+	db.columns = columns
 
 	return src, valuesBuf, nil
 }
@@ -1261,7 +1280,7 @@ func (db *DataBlock) initFromBlockResult(br *blockResult) {
 	cs := br.getColumns()
 	for _, c := range cs {
 		values := c.getValues(br)
-		db.Columns = append(db.Columns, BlockColumn{
+		db.columns = append(db.columns, BlockColumn{
 			Name:   c.name,
 			Values: values,
 		})

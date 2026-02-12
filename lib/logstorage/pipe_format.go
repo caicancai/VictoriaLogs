@@ -62,6 +62,10 @@ func (pf *pipeFormat) canReturnLastNResults() bool {
 	return pf.resultField != "_time"
 }
 
+func (pf *pipeFormat) isFixedOutputFieldsOrder() bool {
+	return false
+}
+
 func (pf *pipeFormat) updateNeededFields(f *prefixfilter.Filter) {
 	if !f.MatchString(pf.resultField) {
 		return
