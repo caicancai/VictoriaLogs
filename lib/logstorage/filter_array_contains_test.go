@@ -48,9 +48,9 @@ func TestMatchArrayContains(t *testing.T) {
 	f(`["foo"]`, "fo", false)      // partial match
 
 	// Escaped strings in JSON
-	f(`["a\"b"]`, "a\"b", true)   // \" escape => a"b
-	f(`["a\nb"]`, "a\nb", true)   // \n escape
-	f(`["a\u0062"]`, "ab", true)  // \u0062 => 'b'
+	f(`["a\"b"]`, "a\"b", true)  // \" escape => a"b
+	f(`["a\nb"]`, "a\nb", true)  // \n escape
+	f(`["a\u0062"]`, "ab", true) // \u0062 => 'b'
 
 	// Nested structures (ignored by current implementation)
 	f(`[{"a":"b"}]`, `{"a":"b"}`, false) // nested object ignored
