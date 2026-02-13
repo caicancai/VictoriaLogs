@@ -2,8 +2,8 @@ package logstorage
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/VictoriaMetrics/VictoriaLogs/lib/prefixfilter"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/bytesutil"
@@ -186,8 +186,8 @@ func matchArrayContains(s, value string) bool {
 			bb.B = append(bb.B[:0], '"')
 			bb.B = append(bb.B, bRaw...)
 			bb.B = append(bb.B, '"')
-			us, err := strconv.Unquote(bytesutil.ToUnsafeString(bb.B))
-			if err != nil {
+			var us string
+			if err := json.Unmarshal(bb.B, &us); err != nil {
 				continue
 			}
 			if us == value {
