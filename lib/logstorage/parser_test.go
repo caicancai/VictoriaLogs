@@ -1118,9 +1118,9 @@ func TestParseFilterArrayContains(t *testing.T) {
 	f(`array_contains(foo)`, "_msg", "foo")
 	f(`foo:array_contains(bar)`, "foo", "bar")
 	f(`array_contains("")`, "_msg", "")
-	f(`foo:array_contains("a\\\"b")`, "foo", "a\"b")
-	f(`foo:array_contains("a\\nb")`, "foo", "a\nb")
-	f(`foo:array_contains("a\\u0062")`, "foo", "ab")
+	f("foo:array_contains(\"a\\\"b\")", "foo", "a\"b")
+	f("foo:array_contains(\"a\\nb\")", "foo", "a\nb")
+	f("foo:array_contains(\"a\\u0062\")", "foo", "ab")
 }
 
 func TestParseFilterRegexp(t *testing.T) {
